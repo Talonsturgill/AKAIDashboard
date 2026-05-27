@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Logo } from "../brand/Logo";
 import { UniversalSearch } from "../search/UniversalSearch";
+import { MobileNav } from "./MobileNav";
 
 const links = [
   { href: "/archive", label: "Archive" },
@@ -26,8 +27,11 @@ export function Navigation() {
             </Link>
           ))}
         </nav>
-        <div className="ml-auto w-full max-w-xs">
-          <UniversalSearch />
+        <div className="ml-auto flex items-center gap-2">
+          <div className="w-full min-w-0 max-w-xs">
+            <UniversalSearch />
+          </div>
+          <MobileNav links={links} />
         </div>
       </div>
     </header>
