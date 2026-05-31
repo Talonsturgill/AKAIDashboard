@@ -78,6 +78,10 @@ type ArcDatum = {
   sourcePosition: [number, number];
   targetPosition: [number, number];
   width: number;
+  contractTitle: string;
+  contractValue: number | null;
+  awardingName: string;
+  winningName: string;
 };
 
 function buildArcData(
@@ -95,26 +99,43 @@ function buildArcData(
 
   const arcs: ArcDatum[] = [];
   for (const c of contracts) {
-    // Target (winning side) must resolve to a location. Without one we cannot draw an arc.
     const target = entityLocation(c.winning_entity_id, entityMap, projectsByEntity);
     if (!target) continue;
-    // Source defaults to the federal hub (Anchorage) if the awarding entity has no resolvable location.
     const source =
       entityLocation(c.awarding_entity_id, entityMap, projectsByEntity) ?? FEDERAL_SOURCE;
+    const winningEntity = c.winning_entity_id ? entityMap.get(c.winning_entity_id) : null;
+    const awardingEntity = c.awarding_entity_id ? entityMap.get(c.awarding_entity_id) : null;
 
     arcs.push({
       sourcePosition: source,
       targetPosition: target,
       width: logScale(c.contract_value ?? 0),
+      contractTitle: c.title,
+      contractValue: c.contract_value,
+      awardingName: awardingEntity?.name ?? "Federal grant",
+      winningName: winningEntity?.name ?? "Unknown",
     });
   }
   return arcs;
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 type ColumnDatum = {
   position: [number, number];
   elevation: number;
   color: [number, number, number, number];
+  name: string;
+  status: string | null;
+  capacityValue: number | null;
+  capacityMetric: string | null;
 };
 
 function buildColumnData(projects: InfraProject[]): ColumnDatum[] {
@@ -124,6 +145,10 @@ function buildColumnData(projects: InfraProject[]): ColumnDatum[] {
       position: [p.longitude, p.latitude] as [number, number],
       elevation: Math.max((p.capacity_value ?? 1) * 800, 5000),
       color: statusColor(p.status),
+      name: p.name,
+      status: p.status,
+      capacityValue: p.capacity_value,
+      capacityMetric: p.capacity_metric,
     }));
 }
 
@@ -214,6 +239,48 @@ export default function DeckOverlay({
         controller: false,
         viewState: buildViewState(),
         layers: [],
+        getTooltip: ({ object, layer }) => {
+          if (!object || !layer) return null;
+          if (layer.id === "intel-arcs") {
+            const a = object as ArcDatum;
+            const dollars =
+              a.contractValue !== null
+                ? new Intl.NumberFormat("en-US", {
+                    style: "currency",
+                    currency: "USD",
+                    maximumFractionDigits: 0,
+                  }).format(a.contractValue)
+                : "value not disclosed";
+            return {
+              html: `<div style="max-width:280px;font-family:ui-monospace,monospace;color:#e2e8f0;line-height:1.5"><div style="font-weight:600;color:#22d3ee;margin-bottom:6px;font-size:11px">${escapeHtml(a.contractTitle)}</div><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em">VALUE</div><div style="font-size:11px;margin-bottom:4px">${dollars}</div><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em">FLOW</div><div style="font-size:11px">${escapeHtml(a.awardingName)} <span style="color:#fbbf24">to</span> ${escapeHtml(a.winningName)}</div></div>`,
+              style: {
+                background: "rgba(10,12,18,0.95)",
+                border: "1px solid rgba(34,211,238,0.4)",
+                borderRadius: "4px",
+                padding: "8px 10px",
+                boxShadow: "0 4px 18px rgba(0,0,0,0.5)",
+              },
+            };
+          }
+          if (layer.id === "intel-columns") {
+            const col = object as ColumnDatum;
+            const cap =
+              col.capacityValue !== null
+                ? `${col.capacityValue.toLocaleString()} ${col.capacityMetric ?? ""}`
+                : "capacity not disclosed";
+            return {
+              html: `<div style="max-width:260px;font-family:ui-monospace,monospace;color:#e2e8f0;line-height:1.5"><div style="font-weight:600;color:#fbbf24;margin-bottom:6px;font-size:11px">${escapeHtml(col.name)}</div><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em">STATUS</div><div style="font-size:11px;margin-bottom:4px">${escapeHtml(col.status ?? "unknown")}</div><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em">CAPACITY</div><div style="font-size:11px">${cap}</div></div>`,
+              style: {
+                background: "rgba(10,12,18,0.95)",
+                border: "1px solid rgba(251,191,36,0.4)",
+                borderRadius: "4px",
+                padding: "8px 10px",
+                boxShadow: "0 4px 18px rgba(0,0,0,0.5)",
+              },
+            };
+          }
+          return null;
+        },
       });
       deckRef.current = deck;
       map.on("move", syncViewport);
@@ -261,7 +328,7 @@ export default function DeckOverlay({
           widthMinPixels: 1,
           widthMaxPixels: 12,
           greatCircle: true,
-          pickable: false,
+          pickable: true,
         })
       );
     }
@@ -278,7 +345,7 @@ export default function DeckOverlay({
           extruded: true,
           diskResolution: 6,
           elevationScale: 1,
-          pickable: false,
+          pickable: true,
         })
       );
     }
@@ -301,7 +368,7 @@ export default function DeckOverlay({
             [251, 191, 36, 210],
             [255, 60, 60, 240],
           ],
-          pickable: false,
+          pickable: true,
         })
       );
     }

@@ -10,12 +10,14 @@ type IntelOverlayTogglesProps = {
 const INTEL_LAYERS: {
   key: IntelKey;
   label: string;
+  description: string;
   color: string;
   activeGlow: string;
 }[] = [
   {
     key: "ARCS",
     label: "ARCS",
+    description: "Federal contract money flows. Hover an arc for details.",
     color: "border-cyan-500/60 text-cyan-300",
     activeGlow:
       "border-cyan-400 text-cyan-200 [box-shadow:0_0_10px_hsl(189_94%_43%/0.5),inset_0_0_6px_hsl(189_94%_43%/0.1)]",
@@ -23,6 +25,7 @@ const INTEL_LAYERS: {
   {
     key: "COLUMNS",
     label: "COLUMNS",
+    description: "Data center capacity as 3D extrusions. Height = MW.",
     color: "border-amber-500/60 text-amber-300",
     activeGlow:
       "border-amber-400 text-amber-200 [box-shadow:0_0_10px_hsl(38_92%_50%/0.5),inset_0_0_6px_hsl(38_92%_50%/0.1)]",
@@ -30,6 +33,7 @@ const INTEL_LAYERS: {
   {
     key: "HEAT",
     label: "HEAT",
+    description: "Infrastructure density. Hot zones = clustered assets.",
     color: "border-rose-500/60 text-rose-300",
     activeGlow:
       "border-rose-400 text-rose-200 [box-shadow:0_0_10px_hsl(351_83%_53%/0.5),inset_0_0_6px_hsl(351_83%_53%/0.1)]",
@@ -45,18 +49,24 @@ export default function IntelOverlayToggles({
       <span className="label-eyebrow mb-1 text-[9px] tracking-[0.16em]">
         INTEL OVERLAYS
       </span>
-      {INTEL_LAYERS.map(({ key, label, color, activeGlow }) => {
+      {INTEL_LAYERS.map(({ key, label, description, color, activeGlow }) => {
         const isActive = activeIntel.has(key);
         return (
-          <button
-            key={key}
-            onClick={() => onToggle(key)}
-            className={`rounded border px-3 py-1.5 font-mono text-[10px] font-semibold tracking-widest transition-all duration-200 ${
-              isActive ? activeGlow : `${color} opacity-40 hover:opacity-60`
-            }`}
-          >
-            {label}
-          </button>
+          <div key={key} className="flex flex-col gap-1">
+            <button
+              onClick={() => onToggle(key)}
+              className={`rounded border px-3 py-1.5 font-mono text-[10px] font-semibold tracking-widest transition-all duration-200 ${
+                isActive ? activeGlow : `${color} opacity-40 hover:opacity-60`
+              }`}
+            >
+              {label}
+            </button>
+            {isActive && (
+              <p className="px-1 text-[9px] leading-snug text-[var(--color-text-tertiary)]">
+                {description}
+              </p>
+            )}
+          </div>
         );
       })}
     </div>
