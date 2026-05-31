@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { AuroraBackground } from "@/components/brand/AuroraBackground";
 import { formatNumber } from "@/lib/utils/format";
-import { Card, Metric, Text, Callout } from "@tremor/react";
+import { Card, Metric, Text } from "@tremor/react";
 
 export const revalidate = 300;
 
@@ -72,19 +72,8 @@ export default async function HomePage() {
           surrounds it all. Updated daily.
         </p>
 
-        {/* Systems status callout */}
-        <div className="mt-10 w-full max-w-3xl text-left">
-          <Callout
-            title="All systems nominal"
-            color="cyan"
-            className="bg-[hsl(189_94%_43%/0.08)] ring-[hsl(189_94%_43%/0.25)] text-[var(--color-text-secondary)]"
-          >
-            Data pipelines running. Last index refresh within 24 hours.
-          </Callout>
-        </div>
-
         {/* Metric tiles */}
-        <div className="mt-10 grid w-full max-w-3xl grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="mt-12 grid w-full max-w-3xl grid-cols-2 gap-3 md:grid-cols-4">
           {tiles.map((tile) => (
             <Card
               key={tile.label}
