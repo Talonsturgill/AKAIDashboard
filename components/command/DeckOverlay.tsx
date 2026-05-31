@@ -197,7 +197,11 @@ export default function DeckOverlay({
     canvas.style.width = "100%";
     canvas.style.height = "100%";
     canvas.style.pointerEvents = "none";
-    canvas.style.zIndex = "350"; // between tile pane (200) and marker pane (600)
+    // Must be > 400 so the canvas paints ABOVE Leaflet's mapPane (z=400), which
+    // creates its own stacking context containing tiles, polylines, and markers.
+    // Anything below 400 here gets fully occluded by the basemap even though the
+    // pixels are written to the canvas buffer — that's the silent-render trap.
+    canvas.style.zIndex = "450";
     mapContainer.appendChild(canvas);
 
     function buildViewState(): MapViewState {
@@ -206,7 +210,7 @@ export default function DeckOverlay({
         longitude: center.lng,
         latitude: center.lat,
         zoom: map!.getZoom() - 1, // deck.gl zoom is offset by 1 from Leaflet's zoom
-        pitch: 45,
+        pitch: 30, // moderate tilt so ColumnLayer extrusion is visible without burying arcs
         bearing: 0,
       };
     }
@@ -340,14 +344,16 @@ export default function DeckOverlay({
           data: arcData,
           getSourcePosition: (d) => d.sourcePosition,
           getTargetPosition: (d) => d.targetPosition,
-          getWidth: (d) => d.width,
-          getSourceColor: [0, 255, 255, 180],
-          getTargetColor: [251, 191, 36, 220],
+          getWidth: (d) => Math.max(d.width, 3),
+          getSourceColor: [0, 255, 255, 255], // fully opaque cyan
+          getTargetColor: [251, 191, 36, 255], // fully opaque amber
           widthUnits: "pixels",
-          widthMinPixels: 1,
-          widthMaxPixels: 12,
-          greatCircle: true,
+          widthMinPixels: 3, // never thinner than 3px so arcs are visible on any display
+          widthMaxPixels: 16,
+          greatCircle: false, // simple parabola; great-circle math can curve arcs out of frame at low pitch
           pickable: true,
+          // Lift arcs off the ground plane so they don't z-fight with the basemap tile pane.
+          getHeight: 1,
         })
       );
     }
