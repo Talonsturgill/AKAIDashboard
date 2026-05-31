@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { AuroraBackground } from "@/components/brand/AuroraBackground";
 import { formatNumber } from "@/lib/utils/format";
@@ -103,11 +104,27 @@ export default async function HomePage() {
         </div>
 
         <div className="mt-16 flex flex-col items-center gap-3">
-          <span className="label-eyebrow">Network coming online</span>
+          <span className="label-eyebrow text-[var(--color-aurora-cyan)]">
+            Network online
+          </span>
           <p className="max-w-md text-sm text-[var(--color-text-tertiary)]">
-            The relationship graph will render here once the entity and
-            relationship-inference routines have run their first cycle.
+            The entity network is live and explorable. Open the relationship
+            graph or jump straight into the command center.
           </p>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/companies"
+              className="rounded border border-[var(--color-border-soft)] bg-[var(--color-surface)] px-4 py-2 font-mono text-xs uppercase tracking-wider text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-aurora-cyan)] hover:text-[var(--color-aurora-cyan)]"
+            >
+              Open relationship graph →
+            </Link>
+            <Link
+              href="/command"
+              className="rounded border border-[var(--color-border-soft)] bg-[var(--color-surface)] px-4 py-2 font-mono text-xs uppercase tracking-wider text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-aurora-cyan)] hover:text-[var(--color-aurora-cyan)]"
+            >
+              Open command center →
+            </Link>
+          </div>
         </div>
       </div>
     </section>
