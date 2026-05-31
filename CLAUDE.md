@@ -63,8 +63,16 @@ RLS model: every table enables RLS with a single policy — `FOR SELECT TO anon,
 - Data fetching is server-side in async page components with ISR via `export const revalidate = <seconds>` (homepage 300, archive 60). Pages query Supabase directly and render the empty/zero state inline (e.g. the archive's `EmptyState`), so they degrade gracefully before any data exists.
 - Tailwind v4 — no `tailwind.config.js`. Configured through `@tailwindcss/postcss` and `app/globals.css`, which defines the brand as CSS custom properties (`--color-aurora-cyan`, `--color-text-primary`, …) and utility classes (`aurora-gradient-text`, `label-eyebrow`). The look is a dark "aurora" theme; brand pieces live in `components/brand/`.
 
-## Build status (what exists vs. planned)
+## Build status (as of 2026-05-31)
 
-Built (README phases 1–2): homepage, `/archive`, `/archive/[id]`, and the search API.
+All planned routes are built AND populated with adversarially-verified Alaska AI ecosystem data: homepage with live counts, `/archive`, `/archive/[id]`, `/companies` + `/companies/[id]` (with @xyflow/react relationship graph), `/contracts` + `/contracts/[id]`, `/policy` + `/policy/[id]`, `/infrastructure` + `/infrastructure/[id]` (Mapbox map with graceful no-token fallback), `/admin/routines` status screen, and the `/api/search` hybrid search endpoint.
 
-Referenced but not yet built — expect missing routes and placeholder copy until done: entities + network graph (`/companies`), contract tracker (`/contracts`), policy pulse (`/policy`), infrastructure map (uses `NEXT_PUBLIC_MAPBOX_TOKEN`), and an admin/observability page (`/admin/routines`) that would read `routine_runs`.
+Supabase population (every row carries a `metadata.verification` block with source URL, adversarial-check verdict, and checker agent ID):
+- 36 entities (telcos, 11 Alaska Native Corporations, 4 universities, state + federal agencies, infrastructure operators, tribal orgs, the Alaska BEAD program)
+- 9 data sources, 12 archive articles (Alaska.AI substack + ADN + Alaska Public Media + Northern Journal)
+- 13 federal contracts, 14 AI/broadband/data policies, 9 infrastructure projects (all with valid Alaska lat/long), 24 entity relationships
+- `dashboard_metrics` row keyed `platform_stats` with live counts as JSONB
+
+Writing rules for any content rendered on the site (descriptions, summaries, ak_relevance, etc.): no em dashes, colons, semicolons, or AI tells. Quoted third-party content (substack/news article bodies) preserved verbatim. See `feedback_website_content_style` memory.
+
+Pending follow-ons: add `NEXT_PUBLIC_MAPBOX_TOKEN` to enable the live `/infrastructure` map; build the Palantir-style command-center upgrade to `/infrastructure` (war-room aesthetic, clickable detail panels, layered Quintillion/AlCan ONE/AIRRAQ fiber routes, territory polygons around the DAF EUL clusters at JBER/Eielson/Clear SFS); set up the 8 Claude Code Routines at claude.ai/code so data stays current.
