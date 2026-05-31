@@ -12,7 +12,60 @@ import { STATUS_COLORS_RGBA } from "@/lib/command/constants";
 
 const FEDERAL_SOURCE: [number, number] = [-149.9, 61.2]; // Anchorage, as federal origin
 
-function logScale(value: number, min = 1, max = 10): number {
+// HQ coords for entities that win contracts but have no infrastructure_projects
+// row pointing to them. Without these, most ARC entries would be dropped because
+// the target endpoint could not be resolved.
+const ENTITY_HQ_FALLBACK: Record<string, [number, number]> = {
+  "nana-regional-corporation": [-149.9, 61.2],
+  "doyon-limited": [-147.72, 64.84],
+  "sealaska-corporation": [-134.42, 58.3],
+  "chugach-alaska-corporation": [-149.9, 61.2],
+  "calista-corporation": [-149.9, 61.2],
+  "cook-inlet-region-inc": [-149.9, 61.2],
+  "bering-straits-native-corporation": [-165.41, 64.5],
+  "bristol-bay-native-corporation": [-149.9, 61.2],
+  "the-aleut-corporation": [-149.9, 61.2],
+  "koniag-inc": [-152.4, 57.79],
+  "gci-communication-corp": [-149.9, 61.2],
+  "alaska-communications-systems": [-149.9, 61.2],
+  "matanuska-telecom-association": [-149.1, 61.6],
+  "university-of-alaska-anchorage": [-149.83, 61.19],
+  "university-of-alaska-fairbanks": [-147.85, 64.86],
+  "university-of-alaska-southeast": [-134.42, 58.3],
+  "alaska-pacific-university": [-149.81, 61.19],
+  "alaska-industrial-development-and-export-authority": [-149.9, 61.2],
+  "alaska-energy-authority": [-149.9, 61.2],
+  "alaska-dcced": [-134.42, 58.3],
+  "alaska-dot-pf": [-134.42, 58.3],
+  "joint-base-elmendorf-richardson": [-149.71, 61.3],
+  "eielson-air-force-base": [-147.05, 64.66],
+  "noaa-alaska-regional-office": [-134.42, 58.3],
+  "usgs-alaska-science-center": [-149.9, 61.2],
+  "quintillion": [-149.9, 61.2],
+  "alcan-one": [-147.35, 64.75],
+  "alaska-federation-of-natives": [-149.9, 61.2],
+  "cook-inlet-tribal-council": [-149.9, 61.2],
+  "tanana-chiefs-conference": [-147.72, 64.84],
+  "association-of-village-council-presidents": [-161.76, 60.79],
+  "bristol-bay-native-association": [-158.46, 59.04],
+  "alaska-bead-program": [-149.9, 61.2],
+};
+
+function entityLocation(
+  entityId: string | null,
+  entityMap: Map<string, EntityRow>,
+  projectsByEntity: Map<string, InfraProject>,
+): [number, number] | null {
+  if (!entityId) return null;
+  const entity = entityMap.get(entityId);
+  if (!entity) return null;
+  const project = projectsByEntity.get(entityId);
+  if (project) return [project.longitude, project.latitude];
+  const slug = entity.slug ?? "";
+  return ENTITY_HQ_FALLBACK[slug] ?? null;
+}
+
+function logScale(value: number, min = 2, max = 16): number {
   if (value <= 0) return min;
   return min + (Math.log(value + 1) / Math.log(1e8)) * (max - min);
 }
@@ -42,23 +95,12 @@ function buildArcData(
 
   const arcs: ArcDatum[] = [];
   for (const c of contracts) {
-    if (!c.awarding_entity_id || !c.winning_entity_id) continue;
-    const awardingEntity = entityMap.get(c.awarding_entity_id);
-    const winningEntity = entityMap.get(c.winning_entity_id);
-    if (!awardingEntity || !winningEntity) continue;
-
-    // Source is awarding entity's project location; fall back to Anchorage for federal entities with no mapped project
-    const awardingProject = projectsByEntity.get(c.awarding_entity_id);
-    const source: [number, number] = awardingProject
-      ? [awardingProject.longitude, awardingProject.latitude]
-      : FEDERAL_SOURCE;
-
-    const winningProject = projectsByEntity.get(c.winning_entity_id);
-    if (!winningProject) continue;
-    const target: [number, number] = [
-      winningProject.longitude,
-      winningProject.latitude,
-    ];
+    // Target (winning side) must resolve to a location. Without one we cannot draw an arc.
+    const target = entityLocation(c.winning_entity_id, entityMap, projectsByEntity);
+    if (!target) continue;
+    // Source defaults to the federal hub (Anchorage) if the awarding entity has no resolvable location.
+    const source =
+      entityLocation(c.awarding_entity_id, entityMap, projectsByEntity) ?? FEDERAL_SOURCE;
 
     arcs.push({
       sourcePosition: source,
