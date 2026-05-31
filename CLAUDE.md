@@ -75,14 +75,55 @@ Supabase population (every row carries a `metadata.verification` block with sour
 
 Writing rules for any content rendered on the site (descriptions, summaries, ak_relevance, etc.): no em dashes, colons, semicolons, or AI tells. Quoted third-party content (substack/news article bodies) preserved verbatim. See `feedback_website_content_style` memory.
 
-Pending follow-ons: add `NEXT_PUBLIC_MAPBOX_TOKEN` to enable the live `/infrastructure` map; set up the 8 Claude Code Routines at claude.ai/code so data stays current.
+Pending follow-on: set up the 8 Claude Code Routines at claude.ai/code so data stays current. (Mapbox is no longer required — see /command map stack below.)
+
+## Integrated OSS (do not replicate)
+
+Per the `feedback_integrate_dont_recreate` memory, the site composes purpose-built libraries instead of hand-rolling. When adding a feature, check if one of these already covers it:
+
+- **Leaflet (vanilla)** — basemap rendering on `/command` and `/infrastructure`. Tiles via CartoCDN Dark Matter (no token, no card). Do NOT use `react-leaflet` — it breaks under React 19 + Next 15 with `Cannot read properties of undefined (reading 'appendChild')`. Stay on `useRef` + `useEffect` mount/unmount.
+- **deck.gl** (`@deck.gl/core`, `@deck.gl/layers`, `@deck.gl/aggregation-layers`) — WebGL overlays on top of Leaflet for the INTEL OVERLAYS on `/command`.
+- **Tremor** (`@tremor/react`) — `<Card>`, `<Metric>`, `<Tracker>`, `<Callout>` for dashboard chrome. Used across homepage, `/contracts`, `/policy`, `/admin/routines`.
+- **shadcn/ui primitives** (in `components/ui/`) — `Sheet`, `Dialog`, `Button`, `Card`, `Command`, `Badge`, `Separator`. Built with Radix under the hood.
+- **cmdk** — `Cmd+K` command palette in the top nav.
+- **TanStack Table v8** (`@tanstack/react-table`) — every sortable/filterable data table.
+- **@xyflow/react** — entity relationship graph on `/companies/[id]`.
 
 ## /command war-room
 
 Full-bleed Palantir-style command center at the `/command` route. Server component at `app/(public)/command/page.tsx` fetches all `infrastructure_projects` with valid latitude/longitude, plus their operator entities, plus related contracts, plus archive_content, and passes them to `components/command/CommandCenter.tsx` (the client orchestrator).
 
-The map renders via Mapbox when `NEXT_PUBLIC_MAPBOX_TOKEN` is set, otherwise via the SVG Alaska fallback in `components/command/AlaskaSvg.tsx`. The fallback projects each marker's lat/lon onto a 1600x1000 viewBox using a linear projection over bounds `lon -180..-130, lat 51..72`. The Quintillion subsea, AlCan ONE terrestrial, and AIRRAQ subsea fiber routes are drawn as polylines through hardcoded waypoints, and the three DAF EUL clusters (JBER, Eielson, Clear SFS) get radar-style territory rings.
+Map stack (no Mapbox token needed):
+- `components/command/LeafletMap.tsx` — vanilla Leaflet via `useRef` + `useEffect`, CartoCDN Dark Matter tiles. Renders status-colored circle markers per project, the Quintillion / AlCan ONE / AIRRAQ fiber polylines, and the JBER / Eielson / Clear SFS military rings. Exposes an `onMapReady(map)` callback so the parent can hand the `L.Map` instance to `DeckOverlay`.
+- `components/command/DeckOverlay.tsx` — mounts a single `<canvas>` and a single deck.gl `Deck` instance keyed off the Leaflet map's lifecycle. Used by all three INTEL OVERLAYS.
 
-Layer toggles in `components/command/LayerToggles.tsx` filter the visible set by `project_type` (data center, fiber, power) plus a derived MILITARY layer matching the three EUL clusters by name. Clicking any marker opens `components/command/DetailPanel.tsx`, which shows the project, its operator entity link, related contracts, and related articles.
+INTEL OVERLAYS (right-panel toggles in `components/command/IntelOverlayToggles.tsx`):
+- **ARCS** — `ArcLayer` curves from awarding entity to winning entity per contract. Falls back to `ENTITY_HQ_FALLBACK` coords (defined in DeckOverlay) when the winning entity has no infrastructure_projects row — without this, most arcs would silently drop.
+- **COLUMNS** — `ColumnLayer` extrudes a 3D column at each data-center project, height scaled from `capacity_value`. Requires `pitch > 0` in the deck viewState to be visible.
+- **HEAT** — `HeatmapLayer` density of every project location, blue→amber→red ramp.
 
-KPI bar at top totals compute MW, fiber Tbps, and estimated CAPEX. A coordinate HUD bottom-left tracks the mouse position over the map.
+### deck.gl + Leaflet gotchas (these took hours to find — do not relitigate)
+
+1. **z-index 450, not lower.** Leaflet's `.leaflet-map-pane` is at `z-index: 400` and creates a stacking context containing every tile, polyline, and marker. A canvas at any z < 400 will silently render — pixels written, picking works, tooltips fire — but be fully occluded by the basemap. Symptoms: tooltips show on hover but no visuals appear. Set canvas `zIndex = "450"` (above mapPane, below the tooltip element at 1000).
+2. **Append canvas to `map.getContainer()`, NOT to a Leaflet pane.** Panes get CSS-transformed during pan, so a canvas inside one will translate with the map AND deck.gl will re-render at the new viewState — producing double-offset drift. The outer container does not translate.
+3. **Defer `new Deck()` until `map.whenReady()`.** Calling `map.getCenter()` synchronously throws `Cannot read properties of undefined (reading '_leaflet_pos')` before Leaflet's first layout pass.
+4. **Picking needs manual wiring when the canvas has `pointer-events: none`.** Deck's built-in `getTooltip` never fires because no events reach the canvas. Use `map.on('mousemove', ...)` + `deck.pickObject({x, y, radius})` + a custom tooltip `<div>` appended to `map.getContainer()`. The tooltip element is tagged `data-deck-tooltip="true"` for testability and for clearing on layer change.
+5. **deck.gl zoom is Leaflet zoom minus 1.** Always compute `zoom: map.getZoom() - 1` in viewState.
+
+Layer toggles in `components/command/LayerToggles.tsx` filter Leaflet markers by `project_type` (data center, fiber, power) plus a derived MILITARY layer matching the three EUL clusters. Clicking any marker opens `components/command/DetailPanel.tsx`, which shows the project, its operator entity link, related contracts, and related articles. KPI bar tops the layout, coordinate HUD bottom-left.
+
+Shared constants and types live in `lib/command/constants.ts` and `lib/command/types.ts` (status colors, military keywords, fiber routes, military rings) — both LeafletMap and DeckOverlay import from there. Don't duplicate.
+
+## Performance pitfalls
+
+Static `import "mapbox-gl/dist/mapbox-gl.css"` or `import mapboxgl from "mapbox-gl"` at module scope inflates the route bundle by ~370 kB even with the feature gated behind a token check. `/infrastructure` was at 479 kB until the mapbox-gl reference was made truly dynamic. If a heavy library is opt-in, load it lazily with `next/dynamic` and put the static CSS import inside the dynamic module — not in the page file. Same pattern applies to deck.gl (`DeckOverlay` is loaded via `dynamic(..., { ssr: false })` from `CommandCenter`).
+
+First request to `/command` on a cold dev server takes ~25–30 s to compile (deck.gl + Leaflet + Tremor + page server logic). This is expected; subsequent requests are instant. Tests that hit `/command` should wait ≥10 s after `goto` before asserting on canvas state.
+
+## Visual verification protocol
+
+Per the `feedback_always_verify_visually` memory, every UI change must be exercised in a real browser before being reported done. Pattern:
+1. Start `npm run dev`, wait for `/command` (or whichever route) to compile (curl until 200, then sleep ~10 s).
+2. Drive the UI with Playwright (`/tmp/shot/*.js`) — toggle the actual button, hover the actual coordinate, take a screenshot.
+3. Use the Read tool on the PNG to look at the rendered pixels. Do not rely on pixel counts alone — the z-index trap above proved that "pixels in canvas" is not the same as "user sees them."
+4. Only after the screenshot matches expectations, report back.
