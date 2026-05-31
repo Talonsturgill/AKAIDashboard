@@ -183,15 +183,13 @@ export default function DeckOverlay({
   useEffect(() => {
     if (!map) return;
 
-    // Create a dedicated Leaflet pane at z-index 350 (between tile pane 200
-    // and marker pane 600) so the deck canvas never blocks marker clicks.
-    let pane = map.getPane("deckGlPane");
-    if (!pane) {
-      pane = map.createPane("deckGlPane");
-    }
-    (pane as HTMLElement).style.zIndex = "350";
-    (pane as HTMLElement).style.pointerEvents = "none";
-
+    // Append the canvas DIRECTLY to the map container, NOT to a Leaflet pane.
+    // Panes get CSS-transformed during pan so the canvas would translate with
+    // the map AND deck.gl would re-render at the new viewState, producing a
+    // double-offset that visually drifts the overlay off-screen. The container
+    // itself does not translate; the canvas stays at fixed viewport position
+    // and deck.gl repaints its content as viewState updates via map move.
+    const mapContainer = map.getContainer();
     const canvas = document.createElement("canvas");
     canvas.style.position = "absolute";
     canvas.style.top = "0";
@@ -199,7 +197,8 @@ export default function DeckOverlay({
     canvas.style.width = "100%";
     canvas.style.height = "100%";
     canvas.style.pointerEvents = "none";
-    (pane as HTMLElement).appendChild(canvas);
+    canvas.style.zIndex = "350"; // between tile pane (200) and marker pane (600)
+    mapContainer.appendChild(canvas);
 
     function buildViewState(): MapViewState {
       const center = map!.getCenter();
@@ -211,8 +210,6 @@ export default function DeckOverlay({
         bearing: 0,
       };
     }
-
-    const mapContainer = map.getContainer();
 
     function syncViewport(): void {
       if (!deckRef.current) return;
