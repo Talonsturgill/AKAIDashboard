@@ -124,7 +124,7 @@ export default function DetailPanel({
 
   return (
     <div
-      className="absolute inset-y-0 right-0 z-30 w-[480px] translate-x-0 transition-transform duration-300 ease-in-out"
+      className="absolute inset-y-0 right-0 z-[1500] w-[480px] translate-x-0 transition-transform duration-300 ease-in-out"
     >
       {/* Glass background */}
       <div className="relative flex h-full flex-col overflow-y-auto border-l border-[var(--color-border-soft)] bg-[var(--color-background)]/95 backdrop-blur-xl">

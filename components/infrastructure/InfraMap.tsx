@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
@@ -18,7 +19,22 @@ type Props = {
   mapboxToken: string;
 };
 
-export default function InfraMap({ projects, mapboxToken }: Props) {
+// ─── Leaflet fallback map — loaded client-side only ───────────────────────────
+const InfraLeafletMap = dynamic(() => import("./InfraLeafletMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[520px] overflow-hidden rounded-lg border border-[var(--color-border-soft)] bg-[var(--color-surface)]" />
+  ),
+});
+
+// ─── Mapbox map ───────────────────────────────────────────────────────────────
+function MapboxMap({
+  projects,
+  mapboxToken,
+}: {
+  projects: InfraMapProject[];
+  mapboxToken: string;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -63,33 +79,21 @@ export default function InfraMap({ projects, mapboxToken }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapboxToken]);
 
-  if (!mapboxToken) {
-    return (
-      <div className="flex h-[520px] items-center justify-center rounded-lg border border-[var(--color-border-soft)] bg-[var(--color-surface)]">
-        <div className="max-w-sm text-center">
-          <p className="label-eyebrow mb-2">Map unavailable</p>
-          <p className="text-sm text-[var(--color-text-secondary)]">
-            Interactive map needs a Mapbox token. Add{" "}
-            <code className="rounded bg-[var(--color-surface-elevated)] px-1.5 py-0.5 font-mono text-xs">
-              NEXT_PUBLIC_MAPBOX_TOKEN
-            </code>{" "}
-            to{" "}
-            <code className="rounded bg-[var(--color-surface-elevated)] px-1.5 py-0.5 font-mono text-xs">
-              .env.local
-            </code>{" "}
-            to enable it.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div
       ref={containerRef}
       className="h-[520px] overflow-hidden rounded-lg border border-[var(--color-border-soft)]"
     />
   );
+}
+
+// ─── Main export ──────────────────────────────────────────────────────────────
+export default function InfraMap({ projects, mapboxToken }: Props) {
+  if (!mapboxToken) {
+    return <InfraLeafletMap projects={projects} />;
+  }
+
+  return <MapboxMap projects={projects} mapboxToken={mapboxToken} />;
 }
 
 function escapeHtml(str: string): string {

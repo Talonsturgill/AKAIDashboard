@@ -1,12 +1,20 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import AlaskaSvg from "./AlaskaSvg";
+import dynamic from "next/dynamic";
 import DetailPanel from "./DetailPanel";
 import LayerToggles, { type LayerKey } from "./LayerToggles";
 import CoordinateHud from "./CoordinateHud";
 import KpiBar from "./KpiBar";
 import type { InfraProject, EntityRow, ContractRow, ArchiveRow } from "./DetailPanel";
+
+// LeafletMap is client-only. Leaflet touches window/document at module load
+const LeafletMap = dynamic(() => import("./LeafletMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-full w-full bg-[var(--color-background)]" />
+  ),
+});
 
 type CommandCenterProps = {
   projects: InfraProject[];
@@ -61,12 +69,8 @@ export default function CommandCenter({
     setSelectedProject((prev) => (prev?.id === project.id ? null : project));
   }, []);
 
-  const handleMouseMove = useCallback((lat: number, lon: number) => {
+  const handleCoordsChange = useCallback((lat: number, lon: number) => {
     setHoverCoords({ lat, lon });
-  }, []);
-
-  const handleMouseLeave = useCallback(() => {
-    setHoverCoords({ lat: null, lon: null });
   }, []);
 
   const handleClose = useCallback(() => {
@@ -91,20 +95,19 @@ export default function CommandCenter({
             "repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(255,255,255,0.04) 39px,rgba(255,255,255,0.04) 40px)",
         }}
       >
-        {/* Full-bleed SVG map */}
+        {/* Full-bleed Leaflet map */}
         <div className="absolute inset-0">
-          <AlaskaSvg
+          <LeafletMap
             projects={projects}
             activeLayers={activeLayers}
             onMarkerClick={handleMarkerClick}
-            onMouseMove={handleMouseMove}
-            onMouseLeave={handleMouseLeave}
+            onCoordsChange={handleCoordsChange}
             selectedProjectId={selectedProject?.id ?? null}
           />
         </div>
 
         {/* Top-right overlay panel: legend + layer toggles */}
-        <div className="absolute right-4 top-4 z-20 flex flex-col gap-4 rounded border border-[var(--color-border-soft)] bg-[var(--color-background)]/85 p-4 backdrop-blur-sm">
+        <div className="absolute right-4 top-4 z-[1100] flex flex-col gap-4 rounded border border-[var(--color-border-soft)] bg-[var(--color-background)]/85 p-4 backdrop-blur-sm">
           {/* Status legend */}
           <div className="flex flex-col gap-1.5">
             <span className="label-eyebrow mb-1 text-[9px] tracking-[0.16em]">STATUS</span>
@@ -131,7 +134,7 @@ export default function CommandCenter({
         </div>
 
         {/* Bottom-left coordinate HUD */}
-        <div className="absolute bottom-4 left-4 z-20">
+        <div className="absolute bottom-4 left-4 z-[1100]">
           <CoordinateHud lat={hoverCoords.lat} lon={hoverCoords.lon} />
         </div>
 

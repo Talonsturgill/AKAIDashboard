@@ -78,6 +78,69 @@
   }
 }
 
+/* ─── Leaflet overrides ────────────────────────────────────────────────────── */
+
+/* Pulse animation for non-operational project markers */
+@keyframes leaflet-marker-pulse {
+  0%   { transform: translate(-50%, -50%) scale(1);   opacity: 1;   }
+  100% { transform: translate(-50%, -50%) scale(1.45); opacity: 0.5; }
+}
+
+.leaflet-marker-pulse {
+  animation: leaflet-marker-pulse 2s ease-in-out infinite alternate;
+}
+
+/* Pulse animation for military territory rings */
+@keyframes leaflet-ring-pulse {
+  0%   { opacity: 0.5; }
+  100% { opacity: 0.15; }
+}
+
+.leaflet-military-ring,
+.leaflet-military-ring path {
+  animation: leaflet-ring-pulse 3s ease-in-out infinite alternate;
+}
+
+/* Dark-theme zoom controls */
+.leaflet-bar a {
+  background: var(--color-surface) !important;
+  color: var(--color-text-secondary) !important;
+  border-color: var(--color-border-soft) !important;
+}
+
+.leaflet-bar a:hover {
+  background: var(--color-surface-elevated) !important;
+  color: var(--color-text-primary) !important;
+}
+
+/* Dark-theme attribution control */
+.leaflet-control-attribution {
+  background: rgba(0, 0, 0, 0.6) !important;
+  color: var(--color-text-tertiary) !important;
+}
+
+.leaflet-control-attribution a {
+  color: var(--color-text-secondary) !important;
+}
+
+/* Dark-theme tooltip */
+.leaflet-tooltip {
+  background: rgba(10, 12, 18, 0.92) !important;
+  border: 1px solid var(--color-border-soft) !important;
+  border-radius: 4px !important;
+  padding: 4px 8px !important;
+  color: var(--color-text-primary) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
+}
+
+.leaflet-tooltip-bottom::before,
+.leaflet-tooltip-top::before {
+  border-bottom-color: var(--color-border-soft) !important;
+  border-top-color: var(--color-border-soft) !important;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+
 @keyframes aurora-shift {
   0%,
   100% {
