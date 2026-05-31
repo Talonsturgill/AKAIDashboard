@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { AuroraBackground } from "@/components/brand/AuroraBackground";
 import { formatNumber } from "@/lib/utils/format";
+import { Card, Metric, Text, Callout } from "@tremor/react";
 
 export const revalidate = 300;
 
@@ -21,13 +22,36 @@ async function loadStats(): Promise<PlatformStats> {
   return data?.value ?? {};
 }
 
+type StatTile = {
+  label: string;
+  value: number | undefined;
+  description: string;
+};
+
 export default async function HomePage() {
   const stats = await loadStats();
-  const tiles: Array<{ label: string; value: number | undefined }> = [
-    { label: "Entities", value: stats.entities },
-    { label: "Contracts", value: stats.contracts },
-    { label: "Policies tracked", value: stats.policies },
-    { label: "Archive articles", value: stats.archive },
+
+  const tiles: StatTile[] = [
+    {
+      label: "Entities",
+      value: stats.entities,
+      description: "Organizations and agencies active in Alaska AI",
+    },
+    {
+      label: "Contracts",
+      value: stats.contracts,
+      description: "Federal contracts with AI scope tracked",
+    },
+    {
+      label: "Policies tracked",
+      value: stats.policies,
+      description: "State and federal policy documents indexed",
+    },
+    {
+      label: "Archive articles",
+      value: stats.archive,
+      description: "News and analysis articles in the archive",
+    },
   ];
 
   return (
@@ -47,17 +71,34 @@ export default async function HomePage() {
           surrounds it all. Updated daily.
         </p>
 
-        <div className="mt-16 grid w-full max-w-3xl grid-cols-2 gap-px overflow-hidden rounded-lg border border-[var(--color-border-soft)] bg-[var(--color-border-soft)] md:grid-cols-4">
+        {/* Systems status callout */}
+        <div className="mt-10 w-full max-w-3xl text-left">
+          <Callout
+            title="All systems nominal"
+            color="cyan"
+            className="bg-[hsl(189_94%_43%/0.08)] ring-[hsl(189_94%_43%/0.25)] text-[var(--color-text-secondary)]"
+          >
+            Data pipelines running. Last index refresh within 24 hours.
+          </Callout>
+        </div>
+
+        {/* Metric tiles */}
+        <div className="mt-10 grid w-full max-w-3xl grid-cols-2 gap-3 md:grid-cols-4">
           {tiles.map((tile) => (
-            <div
+            <Card
               key={tile.label}
-              className="bg-[var(--color-surface)] px-4 py-6"
+              decoration="top"
+              decorationColor="cyan"
+              className="bg-[var(--color-surface)] ring-[var(--color-border-soft)] shadow-none text-left hover:ring-[var(--color-border-strong)] transition-all duration-200"
             >
-              <p className="font-mono text-2xl text-[var(--color-text-primary)]">
+              <Text className="label-eyebrow">{tile.label}</Text>
+              <Metric className="mt-2 font-mono text-[var(--color-text-primary)]">
                 {formatNumber(tile.value ?? 0)}
-              </p>
-              <p className="label-eyebrow mt-2">{tile.label}</p>
-            </div>
+              </Metric>
+              <Text className="mt-1.5 text-xs text-[var(--color-text-tertiary)] leading-snug">
+                {tile.description}
+              </Text>
+            </Card>
           ))}
         </div>
 

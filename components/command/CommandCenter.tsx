@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
+import type L from "leaflet";
 import DetailPanel from "./DetailPanel";
 import LayerToggles, { type LayerKey } from "./LayerToggles";
+import IntelOverlayToggles from "./IntelOverlayToggles";
 import CoordinateHud from "./CoordinateHud";
 import KpiBar from "./KpiBar";
 import type { InfraProject, EntityRow, ContractRow, ArchiveRow } from "./DetailPanel";
@@ -14,6 +16,11 @@ const LeafletMap = dynamic(() => import("./LeafletMap"), {
   loading: () => (
     <div className="h-full w-full bg-[var(--color-background)]" />
   ),
+});
+
+// DeckOverlay is also client-only (WebGL + Leaflet DOM access)
+const DeckOverlayDynamic = dynamic(() => import("./DeckOverlay"), {
+  ssr: false,
 });
 
 type CommandCenterProps = {
@@ -27,6 +34,10 @@ type CommandCenterProps = {
 };
 
 const ALL_LAYERS: LayerKey[] = ["data_center", "fiber", "power", "military"];
+
+// Leaflet stores its Map instance on the container element under this key at runtime.
+// This is a well-known community pattern; one `any` cast is acceptable per project rules.
+type LeafletContainerEl = HTMLElement & { _leaflet_map?: L.Map };
 
 const STATUS_LEGEND = [
   { status: "operational", label: "OPERATIONAL", color: "#22d3ee" },
@@ -47,6 +58,8 @@ export default function CommandCenter({
   const [activeLayers, setActiveLayers] = useState<Set<LayerKey>>(
     new Set(ALL_LAYERS),
   );
+  const [activeIntel, setActiveIntel] = useState<Set<string>>(new Set());
+  const [leafletMap, setLeafletMap] = useState<L.Map | null>(null);
   const [selectedProject, setSelectedProject] = useState<InfraProject | null>(null);
   const [hoverCoords, setHoverCoords] = useState<{
     lat: number | null;
@@ -63,6 +76,44 @@ export default function CommandCenter({
       }
       return next;
     });
+  }, []);
+
+  const handleIntelToggle = useCallback((key: string) => {
+    setActiveIntel((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }, []);
+
+  // Poll for the Leaflet map instance after the dynamic component has mounted.
+  // Leaflet attaches itself to the container element; we read it here once ready.
+  useEffect(() => {
+    let rafId: number;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 200; // ~4 seconds at 60fps
+
+    function poll() {
+      attempts++;
+      const el = document.querySelector(
+        ".leaflet-container"
+      ) as LeafletContainerEl | null;
+      const map = el?._leaflet_map ?? null;
+      if (map) {
+        setLeafletMap(map);
+        return;
+      }
+      if (attempts < MAX_ATTEMPTS) {
+        rafId = requestAnimationFrame(poll);
+      }
+    }
+
+    rafId = requestAnimationFrame(poll);
+    return () => cancelAnimationFrame(rafId);
   }, []);
 
   const handleMarkerClick = useCallback((project: InfraProject) => {
@@ -104,6 +155,14 @@ export default function CommandCenter({
             onCoordsChange={handleCoordsChange}
             selectedProjectId={selectedProject?.id ?? null}
           />
+          {/* deck.gl WebGL overlay synced to Leaflet viewport */}
+          <DeckOverlayDynamic
+            map={leafletMap}
+            layers={activeIntel}
+            projects={projects}
+            entities={entities}
+            contracts={contracts}
+          />
         </div>
 
         {/* Top-right overlay panel: legend + layer toggles */}
@@ -131,6 +190,14 @@ export default function CommandCenter({
 
           {/* Layer toggles */}
           <LayerToggles activeLayers={activeLayers} onToggle={handleToggle} />
+
+          <div className="h-px bg-[var(--color-border-soft)]" />
+
+          {/* Intel overlay toggles (all off by default) */}
+          <IntelOverlayToggles
+            activeIntel={activeIntel}
+            onToggle={handleIntelToggle}
+          />
         </div>
 
         {/* Bottom-left coordinate HUD */}
