@@ -225,6 +225,63 @@ export default function DeckOverlay({
       deckRef.current.setProps({ width: w, height: h });
     }
 
+    // Deck canvas has pointer-events:none (so Leaflet markers stay clickable),
+    // which means deck.gl's built-in getTooltip cannot fire. We do hit-testing
+    // manually via Leaflet's mousemove + Deck.pickObject and render our own
+    // tooltip element appended to the map container.
+    const tooltipEl = document.createElement("div");
+    tooltipEl.dataset.deckTooltip = "true";
+    tooltipEl.style.cssText =
+      "position:absolute;pointer-events:none;z-index:1000;display:none;max-width:280px;font-family:ui-monospace,monospace;color:#e2e8f0;background:rgba(10,12,18,0.95);border-radius:4px;padding:8px 10px;box-shadow:0 4px 18px rgba(0,0,0,0.5);line-height:1.5;";
+    mapContainer.appendChild(tooltipEl);
+
+    function showTooltipForPick(e: L.LeafletMouseEvent): void {
+      if (!deckRef.current) return;
+      const rect = mapContainer.getBoundingClientRect();
+      const x = e.originalEvent.clientX - rect.left;
+      const y = e.originalEvent.clientY - rect.top;
+      const picked = deckRef.current.pickObject({ x, y, radius: 6 });
+      if (picked?.object && picked.layer) {
+        const layerId = picked.layer.id;
+        let html = "";
+        let border = "rgba(255,255,255,0.2)";
+        if (layerId === "intel-arcs") {
+          const a = picked.object as ArcDatum;
+          const dollars =
+            a.contractValue !== null
+              ? new Intl.NumberFormat("en-US", {
+                  style: "currency",
+                  currency: "USD",
+                  maximumFractionDigits: 0,
+                }).format(a.contractValue)
+              : "value not disclosed";
+          html = `<div style="font-weight:600;color:#22d3ee;margin-bottom:6px;font-size:11px">${escapeHtml(a.contractTitle)}</div><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em">VALUE</div><div style="font-size:11px;margin-bottom:4px">${dollars}</div><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em">FLOW</div><div style="font-size:11px">${escapeHtml(a.awardingName)} <span style="color:#fbbf24">to</span> ${escapeHtml(a.winningName)}</div>`;
+          border = "rgba(34,211,238,0.5)";
+        } else if (layerId === "intel-columns") {
+          const col = picked.object as ColumnDatum;
+          const cap =
+            col.capacityValue !== null
+              ? `${col.capacityValue.toLocaleString()} ${col.capacityMetric ?? ""}`
+              : "capacity not disclosed";
+          html = `<div style="font-weight:600;color:#fbbf24;margin-bottom:6px;font-size:11px">${escapeHtml(col.name)}</div><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em">STATUS</div><div style="font-size:11px;margin-bottom:4px">${escapeHtml(col.status ?? "unknown")}</div><div style="font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em">CAPACITY</div><div style="font-size:11px">${cap}</div>`;
+          border = "rgba(251,191,36,0.5)";
+        }
+        if (html) {
+          tooltipEl.innerHTML = html;
+          tooltipEl.style.border = `1px solid ${border}`;
+          tooltipEl.style.left = `${x + 14}px`;
+          tooltipEl.style.top = `${y + 14}px`;
+          tooltipEl.style.display = "block";
+          return;
+        }
+      }
+      tooltipEl.style.display = "none";
+    }
+
+    function hideTooltip(): void {
+      tooltipEl.style.display = "none";
+    }
+
     // Defer Deck init until Leaflet has positioned its internal panes.
     // Without whenReady, map.getCenter() throws on _leaflet_pos before the
     // map's first layout pass completes.
@@ -239,53 +296,13 @@ export default function DeckOverlay({
         controller: false,
         viewState: buildViewState(),
         layers: [],
-        getTooltip: ({ object, layer }) => {
-          if (!object || !layer) return null;
-          if (layer.id === "intel-arcs") {
-            const a = object as ArcDatum;
-            const dollars =
-              a.contractValue !== null
-                ? new Intl.NumberFormat("en-US", {
-                    style: "currency",
-                    currency: "USD",
-                    maximumFractionDigits: 0,
-                  }).format(a.contractValue)
-                : "value not disclosed";
-            return {
-              html: `<div style="max-width:280px;font-family:ui-monospace,monospace;color:#e2e8f0;line-height:1.5"><div style="font-weight:600;color:#22d3ee;margin-bottom:6px;font-size:11px">${escapeHtml(a.contractTitle)}</div><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em">VALUE</div><div style="font-size:11px;margin-bottom:4px">${dollars}</div><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em">FLOW</div><div style="font-size:11px">${escapeHtml(a.awardingName)} <span style="color:#fbbf24">to</span> ${escapeHtml(a.winningName)}</div></div>`,
-              style: {
-                background: "rgba(10,12,18,0.95)",
-                border: "1px solid rgba(34,211,238,0.4)",
-                borderRadius: "4px",
-                padding: "8px 10px",
-                boxShadow: "0 4px 18px rgba(0,0,0,0.5)",
-              },
-            };
-          }
-          if (layer.id === "intel-columns") {
-            const col = object as ColumnDatum;
-            const cap =
-              col.capacityValue !== null
-                ? `${col.capacityValue.toLocaleString()} ${col.capacityMetric ?? ""}`
-                : "capacity not disclosed";
-            return {
-              html: `<div style="max-width:260px;font-family:ui-monospace,monospace;color:#e2e8f0;line-height:1.5"><div style="font-weight:600;color:#fbbf24;margin-bottom:6px;font-size:11px">${escapeHtml(col.name)}</div><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em">STATUS</div><div style="font-size:11px;margin-bottom:4px">${escapeHtml(col.status ?? "unknown")}</div><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em">CAPACITY</div><div style="font-size:11px">${cap}</div></div>`,
-              style: {
-                background: "rgba(10,12,18,0.95)",
-                border: "1px solid rgba(251,191,36,0.4)",
-                borderRadius: "4px",
-                padding: "8px 10px",
-                boxShadow: "0 4px 18px rgba(0,0,0,0.5)",
-              },
-            };
-          }
-          return null;
-        },
       });
       deckRef.current = deck;
       map.on("move", syncViewport);
       map.on("zoom", syncViewport);
       map.on("resize", resizeCanvas);
+      map.on("mousemove", showTooltipForPick);
+      map.on("mouseout", hideTooltip);
     });
 
     return () => {
@@ -293,12 +310,17 @@ export default function DeckOverlay({
       map.off("move", syncViewport);
       map.off("zoom", syncViewport);
       map.off("resize", resizeCanvas);
+      map.off("mousemove", showTooltipForPick);
+      map.off("mouseout", hideTooltip);
       if (deckRef.current) {
         deckRef.current.finalize();
         deckRef.current = null;
       }
       if (canvas.parentNode) {
         canvas.parentNode.removeChild(canvas);
+      }
+      if (tooltipEl.parentNode) {
+        tooltipEl.parentNode.removeChild(tooltipEl);
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
