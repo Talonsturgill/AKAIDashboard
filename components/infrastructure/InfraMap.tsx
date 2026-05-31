@@ -69,7 +69,7 @@ export default function InfraMap({ projects, mapboxToken }: Props) {
         <div className="max-w-sm text-center">
           <p className="label-eyebrow mb-2">Map unavailable</p>
           <p className="text-sm text-[var(--color-text-secondary)]">
-            Interactive map needs a Mapbox token — add{" "}
+            Interactive map needs a Mapbox token. Add{" "}
             <code className="rounded bg-[var(--color-surface-elevated)] px-1.5 py-0.5 font-mono text-xs">
               NEXT_PUBLIC_MAPBOX_TOKEN
             </code>{" "}

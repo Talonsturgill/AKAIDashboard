@@ -75,4 +75,14 @@ Supabase population (every row carries a `metadata.verification` block with sour
 
 Writing rules for any content rendered on the site (descriptions, summaries, ak_relevance, etc.): no em dashes, colons, semicolons, or AI tells. Quoted third-party content (substack/news article bodies) preserved verbatim. See `feedback_website_content_style` memory.
 
-Pending follow-ons: add `NEXT_PUBLIC_MAPBOX_TOKEN` to enable the live `/infrastructure` map; build the Palantir-style command-center upgrade to `/infrastructure` (war-room aesthetic, clickable detail panels, layered Quintillion/AlCan ONE/AIRRAQ fiber routes, territory polygons around the DAF EUL clusters at JBER/Eielson/Clear SFS); set up the 8 Claude Code Routines at claude.ai/code so data stays current.
+Pending follow-ons: add `NEXT_PUBLIC_MAPBOX_TOKEN` to enable the live `/infrastructure` map; set up the 8 Claude Code Routines at claude.ai/code so data stays current.
+
+## /command war-room
+
+Full-bleed Palantir-style command center at the `/command` route. Server component at `app/(public)/command/page.tsx` fetches all `infrastructure_projects` with valid latitude/longitude, plus their operator entities, plus related contracts, plus archive_content, and passes them to `components/command/CommandCenter.tsx` (the client orchestrator).
+
+The map renders via Mapbox when `NEXT_PUBLIC_MAPBOX_TOKEN` is set, otherwise via the SVG Alaska fallback in `components/command/AlaskaSvg.tsx`. The fallback projects each marker's lat/lon onto a 1600x1000 viewBox using a linear projection over bounds `lon -180..-130, lat 51..72`. The Quintillion subsea, AlCan ONE terrestrial, and AIRRAQ subsea fiber routes are drawn as polylines through hardcoded waypoints, and the three DAF EUL clusters (JBER, Eielson, Clear SFS) get radar-style territory rings.
+
+Layer toggles in `components/command/LayerToggles.tsx` filter the visible set by `project_type` (data center, fiber, power) plus a derived MILITARY layer matching the three EUL clusters by name. Clicking any marker opens `components/command/DetailPanel.tsx`, which shows the project, its operator entity link, related contracts, and related articles.
+
+KPI bar at top totals compute MW, fiber Tbps, and estimated CAPEX. A coordinate HUD bottom-left tracks the mouse position over the map.

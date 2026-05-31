@@ -4,6 +4,7 @@ import { UniversalSearch } from "../search/UniversalSearch";
 import { MobileNav } from "./MobileNav";
 
 const links = [
+  { href: "/command", label: "Command" },
   { href: "/archive", label: "Archive" },
   { href: "/contracts", label: "Contracts" },
   { href: "/companies", label: "Companies" },

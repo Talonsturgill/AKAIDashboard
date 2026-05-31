@@ -42,7 +42,7 @@ export default async function HomePage() {
           <span className="aurora-gradient-text">for AI in Alaska</span>
         </h2>
         <p className="mt-8 max-w-2xl text-base text-[var(--color-text-secondary)] md:text-lg">
-          A searchable dataset of who is doing AI work in Alaska — the
+          A searchable dataset of who is doing AI work in Alaska, covering the
           contracts, the policy, the infrastructure, and the content that
           surrounds it all. Updated daily.
         </p>
