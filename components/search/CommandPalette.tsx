@@ -74,27 +74,30 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
   useEffect(() => {
     const trimmed = query.trim();
-    if (trimmed.length < 2) {
-      setResults([]);
-      return;
-    }
+    if (trimmed.length < 2) { setResults([]); return; }
+    const controller = new AbortController();
     const handle = setTimeout(async () => {
       setLoading(true);
       try {
         const res = await fetch("/api/search", {
           method: "POST",
+          signal: controller.signal,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ q: trimmed }),
         });
         if (res.ok) {
-          const data = (await res.json()) as { results: SearchResult[] };
+          const data = await res.json();
           setResults(data.results ?? []);
+        }
+      } catch (e) {
+        if ((e as Error).name !== "AbortError") {
+          // non-abort errors are swallowed; add logging here if needed
         }
       } finally {
         setLoading(false);
       }
     }, 220);
-    return () => clearTimeout(handle);
+    return () => { clearTimeout(handle); controller.abort(); };
   }, [query]);
 
   function handleSelect(urlPath: string) {

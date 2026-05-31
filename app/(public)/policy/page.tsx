@@ -9,33 +9,35 @@ export const revalidate = 60;
 export default async function PolicyIndexPage() {
   const supabase = await createClient();
 
-  const { data: policiesData, count } = await supabase
-    .from("policies")
-    .select(
-      "id,external_id,title,description,policy_type,jurisdiction,status,sponsor_entity_id,document_url,introduced_date,last_action_date,ai_relevance_score,metadata",
-      { count: "exact" },
-    )
-    .order("last_action_date", { ascending: false, nullsFirst: false })
-    .limit(500)
-    .returns<PolicyRow[]>();
+  // Prefetch all entities in parallel with the policies query, filter client-side
+  const [{ data: policiesData, count }, { data: allEntitiesData }] =
+    await Promise.all([
+      supabase
+        .from("policies")
+        .select(
+          "id,external_id,title,description,policy_type,jurisdiction,status,sponsor_entity_id,document_url,introduced_date,last_action_date,ai_relevance_score,metadata",
+          { count: "exact" },
+        )
+        .order("last_action_date", { ascending: false, nullsFirst: false })
+        .limit(500)
+        .returns<PolicyRow[]>(),
+      supabase
+        .from("entities")
+        .select("id,name")
+        .returns<EntityStub[]>(),
+    ]);
 
   const policies = policiesData ?? [];
 
-  // Collect sponsor entity IDs referenced in this result set
+  // Filter entity stubs to only IDs referenced in the result set
   const entityIds = new Set<string>();
   for (const p of policies) {
     if (p.sponsor_entity_id) entityIds.add(p.sponsor_entity_id);
   }
 
-  let entities: EntityStub[] = [];
-  if (entityIds.size > 0) {
-    const { data: entData } = await supabase
-      .from("entities")
-      .select("id,name")
-      .in("id", Array.from(entityIds))
-      .returns<EntityStub[]>();
-    entities = entData ?? [];
-  }
+  const entities: EntityStub[] = (allEntitiesData ?? []).filter((e) =>
+    entityIds.has(e.id),
+  );
 
   return (
     <section className="mx-auto max-w-[1240px] px-6 py-12">

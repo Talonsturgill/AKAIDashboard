@@ -3,66 +3,23 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import type { InfraProject } from "./DetailPanel";
+import type { InfraProject } from "@/lib/command/types";
 import type { LayerKey } from "./LayerToggles";
-
-// ─── Status colors ────────────────────────────────────────────────────────────
-const STATUS_COLORS: Record<string, string> = {
-  operational: "#22d3ee",
-  proposed: "#fbbf24",
-  construction: "#38bdf8",
-  permitting: "#a78bfa",
-};
+import {
+  STATUS_COLORS,
+  MILITARY_KEYWORDS,
+  FIBER_ROUTES,
+  MILITARY_RINGS,
+} from "@/lib/command/constants";
 
 function markerColor(status: string | null): string {
   return STATUS_COLORS[status ?? ""] ?? "#94a3b8";
 }
 
-// ─── Military keywords ────────────────────────────────────────────────────────
-const MILITARY_KEYWORDS = ["JBER", "Eielson", "Clear"];
 function isMilitary(name: string): boolean {
   return MILITARY_KEYWORDS.some((kw) => name.includes(kw));
 }
 
-// ─── Fiber routes ─────────────────────────────────────────────────────────────
-const FIBER_ROUTES: { id: string; positions: [number, number][]; weight: number }[] = [
-  {
-    id: "quintillion",
-    weight: 2.5,
-    positions: [
-      [64.5, -165.41],
-      [66.9, -162.6],
-      [68.35, -166.81],
-      [70.65, -160.04],
-      [71.29, -156.79],
-      [70.32, -148.4],
-    ],
-  },
-  {
-    id: "alcan",
-    weight: 2.5,
-    positions: [
-      [64.75, -147.35],
-      [64.04, -145.73],
-      [63.34, -142.99],
-      [62.38, -140.87],
-    ],
-  },
-  { id: "airraq-bethel",    weight: 2, positions: [[59.04, -158.46], [60.79, -161.76]] },
-  { id: "airraq-platinum",  weight: 2, positions: [[59.04, -158.46], [59.01, -161.82]] },
-  { id: "airraq-eek",       weight: 2, positions: [[59.04, -158.46], [60.22, -162.02]] },
-  { id: "airraq-quinhagak", weight: 2, positions: [[59.04, -158.46], [59.75, -161.92]] },
-  { id: "airraq-togiak",    weight: 2, positions: [[59.04, -158.46], [59.06, -160.39]] },
-];
-
-// ─── Military rings ───────────────────────────────────────────────────────────
-const MILITARY_RINGS: { id: string; center: [number, number]; radius: number }[] = [
-  { id: "jber",    center: [61.3,  -149.71], radius: 50000 },
-  { id: "eielson", center: [64.66, -147.05], radius: 50000 },
-  { id: "clear",   center: [64.29, -149.17], radius: 50000 },
-];
-
-// ─── DivIcon builder (matches existing globals.css .leaflet-marker-pulse) ────
 function buildDivIcon(color: string, isSelected: boolean, isNonOp: boolean): L.DivIcon {
   const ringSize = isSelected ? 28 : 20;
   const dotSize = isSelected ? 14 : 10;
@@ -113,41 +70,41 @@ function buildDivIcon(color: string, isSelected: boolean, isNonOp: boolean): L.D
   });
 }
 
-// ─── Layer visibility filter ─────────────────────────────────────────────────
 function isVisible(p: InfraProject, activeLayers: Set<LayerKey>): boolean {
   if (isMilitary(p.name)) return activeLayers.has("military");
   const typeKey = (p.project_type ?? "") as LayerKey;
   return activeLayers.has(typeKey);
 }
 
-// ─── Props ────────────────────────────────────────────────────────────────────
 type LeafletMapProps = {
   projects: InfraProject[];
   activeLayers: Set<LayerKey>;
   selectedProjectId: string | null;
   onMarkerClick: (project: InfraProject) => void;
   onCoordsChange: (lat: number, lon: number) => void;
+  onMapReady?: (map: L.Map) => void;
 };
 
-// ─── Main vanilla-Leaflet component ───────────────────────────────────────────
 export default function LeafletMap({
   projects,
   activeLayers,
   selectedProjectId,
   onMarkerClick,
   onCoordsChange,
+  onMapReady,
 }: LeafletMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const overlaysRef = useRef<L.Layer[]>([]);
 
-  // Stable callback refs so the init effect can stay [] dependency-clean
+  // Stable refs so the init effect stays with [] deps and doesn't re-run on every render
   const onCoordsChangeRef = useRef(onCoordsChange);
   const onMarkerClickRef = useRef(onMarkerClick);
+  const onMapReadyRef = useRef(onMapReady);
   useEffect(() => { onCoordsChangeRef.current = onCoordsChange; }, [onCoordsChange]);
   useEffect(() => { onMarkerClickRef.current = onMarkerClick; }, [onMarkerClick]);
+  useEffect(() => { onMapReadyRef.current = onMapReady; }, [onMapReady]);
 
-  // Init map once
   useEffect(() => {
     const el = containerRef.current;
     if (!el || mapRef.current) return;
@@ -176,6 +133,7 @@ export default function LeafletMap({
     });
 
     mapRef.current = map;
+    onMapReadyRef.current?.(map);
 
     return () => {
       map.remove();
@@ -184,12 +142,10 @@ export default function LeafletMap({
     };
   }, []);
 
-  // Sync overlays whenever filters or selection change
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    // Clear previous overlays
     for (const layer of overlaysRef.current) {
       map.removeLayer(layer);
     }

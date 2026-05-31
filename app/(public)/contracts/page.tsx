@@ -9,34 +9,36 @@ export const revalidate = 60;
 export default async function ContractsIndexPage() {
   const supabase = await createClient();
 
-  const { data: contractsData, count } = await supabase
-    .from("contracts")
-    .select(
-      "id,external_id,title,description,contract_value,contract_type,status,award_date,ai_relevance_score,awarding_entity_id,winning_entity_id,source_url,metadata",
-      { count: "exact" },
-    )
-    .order("contract_value", { ascending: false, nullsFirst: false })
-    .limit(500)
-    .returns<ContractRow[]>();
+  // Prefetch all entities in parallel with the contracts query, filter client-side
+  const [{ data: contractsData, count }, { data: allEntitiesData }] =
+    await Promise.all([
+      supabase
+        .from("contracts")
+        .select(
+          "id,external_id,title,description,contract_value,contract_type,status,award_date,ai_relevance_score,awarding_entity_id,winning_entity_id,source_url,metadata",
+          { count: "exact" },
+        )
+        .order("contract_value", { ascending: false, nullsFirst: false })
+        .limit(500)
+        .returns<ContractRow[]>(),
+      supabase
+        .from("entities")
+        .select("id,name")
+        .returns<EntityStub[]>(),
+    ]);
 
   const contracts = contractsData ?? [];
 
-  // Collect all entity IDs referenced in this result set
+  // Filter entity stubs to only IDs referenced in the result set
   const entityIds = new Set<string>();
   for (const c of contracts) {
     if (c.awarding_entity_id) entityIds.add(c.awarding_entity_id);
     if (c.winning_entity_id) entityIds.add(c.winning_entity_id);
   }
 
-  let entities: EntityStub[] = [];
-  if (entityIds.size > 0) {
-    const { data: entData } = await supabase
-      .from("entities")
-      .select("id,name")
-      .in("id", Array.from(entityIds))
-      .returns<EntityStub[]>();
-    entities = entData ?? [];
-  }
+  const entities: EntityStub[] = (allEntitiesData ?? []).filter((e) =>
+    entityIds.has(e.id),
+  );
 
   return (
     <section className="mx-auto max-w-[1240px] px-6 py-12">

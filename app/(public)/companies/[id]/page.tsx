@@ -68,22 +68,54 @@ export default async function CompanyDetailPage({
 
   if (!data) notFound();
 
-  // Fetch relationships involving this entity
-  const { data: fromRels } = await supabase
-    .from("relationships")
-    .select("id,from_entity_id,to_entity_id,relationship_type,strength")
-    .eq("from_entity_id", id)
-    .returns<RelationshipRow[]>();
-
-  const { data: toRels } = await supabase
-    .from("relationships")
-    .select("id,from_entity_id,to_entity_id,relationship_type,strength")
-    .eq("to_entity_id", id)
-    .returns<RelationshipRow[]>();
+  // All six dependent queries are independent of each other — run in parallel
+  const [
+    { data: fromRels },
+    { data: toRels },
+    { data: awardingContracts },
+    { data: winningContracts },
+    { data: policies },
+    { data: infraProjects },
+  ] = await Promise.all([
+    supabase
+      .from("relationships")
+      .select("id,from_entity_id,to_entity_id,relationship_type,strength")
+      .eq("from_entity_id", id)
+      .returns<RelationshipRow[]>(),
+    supabase
+      .from("relationships")
+      .select("id,from_entity_id,to_entity_id,relationship_type,strength")
+      .eq("to_entity_id", id)
+      .returns<RelationshipRow[]>(),
+    supabase
+      .from("contracts")
+      .select("id,title,contract_value,status")
+      .eq("awarding_entity_id", id)
+      .limit(10)
+      .returns<ContractRow[]>(),
+    supabase
+      .from("contracts")
+      .select("id,title,contract_value,status")
+      .eq("winning_entity_id", id)
+      .limit(10)
+      .returns<ContractRow[]>(),
+    supabase
+      .from("policies")
+      .select("id,title,policy_type,status")
+      .eq("sponsor_entity_id", id)
+      .limit(10)
+      .returns<PolicyRow[]>(),
+    supabase
+      .from("infrastructure_projects")
+      .select("id,name,project_type,status")
+      .eq("operator_entity_id", id)
+      .limit(10)
+      .returns<InfrastructureRow[]>(),
+  ]);
 
   const allRels = [...(fromRels ?? []), ...(toRels ?? [])];
 
-  // Collect the "other" entity ids from each relationship
+  // The "other entity names" lookup depends on relationship results — keep sequential
   const otherIds = allRels.map((r) =>
     r.from_entity_id === id ? r.to_entity_id : r.from_entity_id,
   );
@@ -101,43 +133,12 @@ export default async function CompanyDetailPage({
 
   const entityMap = new Map(otherEntities.map((e) => [e.id, e]));
 
-  // Related contracts (awarding or winning)
-  const { data: awardingContracts } = await supabase
-    .from("contracts")
-    .select("id,title,contract_value,status")
-    .eq("awarding_entity_id", id)
-    .limit(10)
-    .returns<ContractRow[]>();
-
-  const { data: winningContracts } = await supabase
-    .from("contracts")
-    .select("id,title,contract_value,status")
-    .eq("winning_entity_id", id)
-    .limit(10)
-    .returns<ContractRow[]>();
-
   // Deduplicate contracts by id
   const contractMap = new Map<string, ContractRow>();
   for (const c of [...(awardingContracts ?? []), ...(winningContracts ?? [])]) {
     contractMap.set(c.id, c);
   }
   const contracts = [...contractMap.values()];
-
-  // Related policies
-  const { data: policies } = await supabase
-    .from("policies")
-    .select("id,title,policy_type,status")
-    .eq("sponsor_entity_id", id)
-    .limit(10)
-    .returns<PolicyRow[]>();
-
-  // Related infrastructure projects
-  const { data: infraProjects } = await supabase
-    .from("infrastructure_projects")
-    .select("id,name,project_type,status")
-    .eq("operator_entity_id", id)
-    .limit(10)
-    .returns<InfrastructureRow[]>();
 
   return (
     <article className="mx-auto max-w-[1100px] px-6 py-12">

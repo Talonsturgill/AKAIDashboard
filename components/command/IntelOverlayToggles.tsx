@@ -3,8 +3,8 @@
 export type IntelKey = "ARCS" | "COLUMNS" | "HEAT";
 
 type IntelOverlayTogglesProps = {
-  activeIntel: Set<string>;
-  onToggle: (k: string) => void;
+  activeIntel: Set<IntelKey>;
+  onToggle: (k: IntelKey) => void;
 };
 
 const INTEL_LAYERS: {

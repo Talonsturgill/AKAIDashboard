@@ -20,14 +20,33 @@ type RawInfraRow = Omit<InfraProject, "latitude" | "longitude" | "metadata"> & {
 export default async function CommandPage() {
   const supabase = await createClient();
 
-  // ── Infrastructure projects with valid coordinates ──────────────────────────
-  const { data: rawProjectsData } = await supabase
-    .from("infrastructure_projects")
-    .select(
-      "id,name,project_type,operator_entity_id,latitude,longitude,location_name,capacity_metric,capacity_value,status,announced_date,operational_date,estimated_cost,source_urls,metadata",
-    )
-    .not("latitude", "is", null)
-    .not("longitude", "is", null);
+  // All four fetches are independent — run in parallel
+  const [
+    { data: rawProjectsData },
+    { data: rawEntities },
+    { data: rawContracts },
+    { data: rawArticles },
+  ] = await Promise.all([
+    supabase
+      .from("infrastructure_projects")
+      .select(
+        "id,name,project_type,operator_entity_id,latitude,longitude,location_name,capacity_metric,capacity_value,status,announced_date,operational_date,estimated_cost,source_urls,metadata",
+      )
+      .not("latitude", "is", null)
+      .not("longitude", "is", null),
+    supabase
+      .from("entities")
+      .select("id,name,slug,type")
+      .returns<EntityRow[]>(),
+    supabase
+      .from("contracts")
+      .select("id,title,contract_value,status,awarding_entity_id,winning_entity_id")
+      .returns<ContractRow[]>(),
+    supabase
+      .from("archive_content")
+      .select("id,title,source_url")
+      .returns<ArchiveRow[]>(),
+  ]);
 
   const rawProjects = (rawProjectsData ?? []) as RawInfraRow[];
 
@@ -55,28 +74,8 @@ export default async function CommandPage() {
       metadata: p.metadata,
     }));
 
-  // ── Entities ────────────────────────────────────────────────────────────────
-  const { data: rawEntities } = await supabase
-    .from("entities")
-    .select("id,name,slug,type")
-    .returns<EntityRow[]>();
-
   const entities: EntityRow[] = rawEntities ?? [];
-
-  // ── Contracts ────────────────────────────────────────────────────────────────
-  const { data: rawContracts } = await supabase
-    .from("contracts")
-    .select("id,title,contract_value,status,awarding_entity_id,winning_entity_id")
-    .returns<ContractRow[]>();
-
   const contracts: ContractRow[] = rawContracts ?? [];
-
-  // ── Archive articles (id + title + source_url only) ─────────────────────────
-  const { data: rawArticles } = await supabase
-    .from("archive_content")
-    .select("id,title,source_url")
-    .returns<ArchiveRow[]>();
-
   const articles: ArchiveRow[] = rawArticles ?? [];
 
   // ── KPI aggregates ───────────────────────────────────────────────────────────

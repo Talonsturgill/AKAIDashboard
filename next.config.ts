@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "substack-post-media.s3.amazonaws.com" },
     ],
   },
+  experimental: {
+    optimizePackageImports: ["@tremor/react", "lucide-react", "@xyflow/react"],
+  },
 };
 
 export default nextConfig;

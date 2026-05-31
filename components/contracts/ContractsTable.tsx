@@ -10,15 +10,11 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   type SortingState,
-  type ColumnFiltersState,
-  type FilterFn,
   flexRender,
 } from "@tanstack/react-table";
 import { formatCurrency, formatDate } from "@/lib/utils/format";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+import { SortIcon } from "@/components/shared/SortIcon";
+import { titleDescFilter } from "@/lib/utils/tableFilters";
 
 export type ContractRow = {
   id: string;
@@ -45,10 +41,6 @@ type Props = {
   rows: ContractRow[];
   entities: EntityStub[];
 };
-
-// ---------------------------------------------------------------------------
-// Status badge
-// ---------------------------------------------------------------------------
 
 type ContractStatus =
   | "solicitation"
@@ -94,46 +86,7 @@ function StatusBadge({ status }: { status: string | null }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Sort indicator
-// ---------------------------------------------------------------------------
-
-function SortIcon({ dir }: { dir: "asc" | "desc" | false }) {
-  if (!dir)
-    return (
-      <span className="ml-1 text-[var(--color-border-strong)] opacity-50">
-        ↕
-      </span>
-    );
-  return (
-    <span className="ml-1 text-[var(--color-aurora-cyan)]">
-      {dir === "asc" ? "↑" : "↓"}
-    </span>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Custom filter function — searches title + description
-// ---------------------------------------------------------------------------
-
-const titleDescFilter: FilterFn<ContractRow> = (row, _columnId, value) => {
-  const q = (value as string).toLowerCase();
-  if (!q) return true;
-  const title = (row.original.title ?? "").toLowerCase();
-  const desc = (row.original.description ?? "").toLowerCase();
-  return title.includes(q) || desc.includes(q);
-};
-titleDescFilter.autoRemove = (val: unknown) => !val;
-
-// ---------------------------------------------------------------------------
-// Column definition
-// ---------------------------------------------------------------------------
-
 const helper = createColumnHelper<ContractRow>();
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 
 export default function ContractsTable({ rows, entities }: Props) {
   const entityMap = useMemo(() => {
@@ -143,11 +96,9 @@ export default function ContractsTable({ rows, entities }: Props) {
   }, [entities]);
 
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  // Derive unique statuses for dropdown
   const statusOptions = useMemo(() => {
     const seen = new Set<string>();
     for (const r of rows) {
@@ -156,7 +107,6 @@ export default function ContractsTable({ rows, entities }: Props) {
     return Array.from(seen).sort();
   }, [rows]);
 
-  // Apply status filter before passing to table
   const filteredRows = useMemo(() => {
     if (statusFilter === "all") return rows;
     return rows.filter((r) => r.status === statusFilter);
@@ -249,11 +199,9 @@ export default function ContractsTable({ rows, entities }: Props) {
     columns,
     state: {
       sorting,
-      columnFilters,
       globalFilter,
     },
     onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
     globalFilterFn: titleDescFilter,
     getCoreRowModel: getCoreRowModel(),
@@ -271,7 +219,6 @@ export default function ContractsTable({ rows, entities }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
         <input
           type="text"
@@ -308,7 +255,6 @@ export default function ContractsTable({ rows, entities }: Props) {
         </span>
       </div>
 
-      {/* Table */}
       <div className="overflow-x-auto rounded-lg border border-[var(--color-border-soft)]">
         <table className="w-full border-collapse text-sm">
           <thead>
@@ -388,7 +334,6 @@ export default function ContractsTable({ rows, entities }: Props) {
         </table>
       </div>
 
-      {/* Pagination */}
       {pageCount > 1 && (
         <div className="flex items-center justify-between pt-1 text-sm">
           <button

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import EntityGraph from "@/components/companies/EntityGraph";
+import GraphPanel from "@/components/companies/GraphPanel";
 import type { GraphNode, GraphEdge } from "@/components/companies/EntityGraph";
 
 export const revalidate = 60;
@@ -58,7 +58,7 @@ export default async function CompaniesIndexPage({
 
   const supabase = await createClient();
 
-  // Paginated entity list
+  // Paginated entity list query
   let listQuery = supabase
     .from("entities")
     .select("id,type,name,description,mention_count,relevance_score", {
@@ -71,19 +71,22 @@ export default async function CompaniesIndexPage({
     listQuery = listQuery.eq("type", typeFilter);
   }
 
-  const { data: listData, count } = await listQuery.returns<EntityRow[]>();
+  // Parallel: list + graph entity fetches are independent
+  const [listResult, graphEntityResult] = await Promise.all([
+    listQuery.returns<EntityRow[]>(),
+    supabase
+      .from("entities")
+      .select("id,name,type")
+      .order("relevance_score", { ascending: false, nullsFirst: false })
+      .limit(60)
+      .returns<GraphEntityRow[]>(),
+  ]);
+
+  const { data: listData, count } = listResult;
   const entities = listData ?? [];
   const totalPages = count ? Math.max(1, Math.ceil(count / PAGE_SIZE)) : 1;
 
-  // Graph: top 60 entities by relevance
-  const { data: graphEntityData } = await supabase
-    .from("entities")
-    .select("id,name,type")
-    .order("relevance_score", { ascending: false, nullsFirst: false })
-    .limit(60)
-    .returns<GraphEntityRow[]>();
-
-  const graphEntities = graphEntityData ?? [];
+  const graphEntities = graphEntityResult.data ?? [];
   const graphEntityIds = new Set(graphEntities.map((e) => e.id));
 
   // Fetch relationships; filter to only those where both endpoints are in the set
@@ -145,7 +148,7 @@ export default async function CompaniesIndexPage({
       {/* Network graph */}
       <div className="mb-10">
         <p className="label-eyebrow mb-3">Relationship network</p>
-        <EntityGraph nodes={graphNodes} edges={graphEdges} />
+        <GraphPanel nodes={graphNodes} edges={graphEdges} />
       </div>
 
       {/* Type filter row */}

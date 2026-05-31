@@ -6,9 +6,9 @@ import { Deck } from "@deck.gl/core";
 import type { MapViewState, Layer } from "@deck.gl/core";
 import { ArcLayer, ColumnLayer } from "@deck.gl/layers";
 import { HeatmapLayer } from "@deck.gl/aggregation-layers";
-import type { InfraProject, EntityRow, ContractRow } from "./DetailPanel";
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+import type { InfraProject, EntityRow, ContractRow } from "@/lib/command/types";
+import type { IntelKey } from "./IntelOverlayToggles";
+import { STATUS_COLORS_RGBA } from "@/lib/command/constants";
 
 const FEDERAL_SOURCE: [number, number] = [-149.9, 61.2]; // Anchorage, as federal origin
 
@@ -17,23 +17,9 @@ function logScale(value: number, min = 1, max = 10): number {
   return min + (Math.log(value + 1) / Math.log(1e8)) * (max - min);
 }
 
-// Status → RGBA color for ColumnLayer
 function statusColor(status: string | null): [number, number, number, number] {
-  switch (status) {
-    case "operational":
-      return [34, 211, 238, 200];
-    case "construction":
-      return [56, 189, 248, 200];
-    case "proposed":
-      return [251, 191, 36, 200];
-    case "permitting":
-      return [167, 139, 250, 200];
-    default:
-      return [148, 163, 184, 180];
-  }
+  return STATUS_COLORS_RGBA[status ?? ""] ?? [148, 163, 184, 180];
 }
-
-// ─── Data builders ────────────────────────────────────────────────────────────
 
 type ArcDatum = {
   sourcePosition: [number, number];
@@ -61,13 +47,12 @@ function buildArcData(
     const winningEntity = entityMap.get(c.winning_entity_id);
     if (!awardingEntity || !winningEntity) continue;
 
-    // Source: awarding entity's project location, or Anchorage as federal fallback
+    // Source is awarding entity's project location; fall back to Anchorage for federal entities with no mapped project
     const awardingProject = projectsByEntity.get(c.awarding_entity_id);
     const source: [number, number] = awardingProject
       ? [awardingProject.longitude, awardingProject.latitude]
       : FEDERAL_SOURCE;
 
-    // Target: winning entity's project location; skip if no project
     const winningProject = projectsByEntity.get(c.winning_entity_id);
     if (!winningProject) continue;
     const target: [number, number] = [
@@ -111,17 +96,13 @@ function buildHeatData(projects: InfraProject[]): HeatPoint[] {
     }));
 }
 
-// ─── Props ────────────────────────────────────────────────────────────────────
-
 type DeckOverlayProps = {
   map: L.Map | null;
-  layers: Set<string>;
+  layers: Set<IntelKey>;
   projects: InfraProject[];
   entities: EntityRow[];
   contracts: ContractRow[];
 };
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function DeckOverlay({
   map,
@@ -132,7 +113,6 @@ export default function DeckOverlay({
 }: DeckOverlayProps) {
   const deckRef = useRef<Deck | null>(null);
 
-  // ── Init + cleanup: runs once when `map` is ready ──────────────────────────
   useEffect(() => {
     if (!map) return;
 
@@ -145,7 +125,6 @@ export default function DeckOverlay({
     (pane as HTMLElement).style.zIndex = "350";
     (pane as HTMLElement).style.pointerEvents = "none";
 
-    // Create the canvas inside that pane
     const canvas = document.createElement("canvas");
     canvas.style.position = "absolute";
     canvas.style.top = "0";
@@ -160,7 +139,7 @@ export default function DeckOverlay({
       return {
         longitude: center.lng,
         latitude: center.lat,
-        zoom: map!.getZoom() - 1, // deck.gl zoom offset
+        zoom: map!.getZoom() - 1, // deck.gl zoom is offset by 1 from Leaflet's zoom
         pitch: 45,
         bearing: 0,
       };
@@ -209,7 +188,6 @@ export default function DeckOverlay({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map]);
 
-  // ── Update layers whenever data or toggle state changes ────────────────────
   useEffect(() => {
     const deck = deckRef.current;
     if (!deck) return;
@@ -228,8 +206,8 @@ export default function DeckOverlay({
           getSourcePosition: (d) => d.sourcePosition,
           getTargetPosition: (d) => d.targetPosition,
           getWidth: (d) => d.width,
-          getSourceColor: [0, 255, 255, 180],  // cyan
-          getTargetColor: [251, 191, 36, 220],  // amber
+          getSourceColor: [0, 255, 255, 180],
+          getTargetColor: [251, 191, 36, 220],
           widthUnits: "pixels",
           widthMinPixels: 1,
           widthMaxPixels: 12,
@@ -282,6 +260,6 @@ export default function DeckOverlay({
     deck.setProps({ layers: activeLayers });
   }, [layers, projects, entities, contracts]);
 
-  // Nothing to render. deck.gl owns the canvas directly inside the Leaflet pane.
+  // Nothing to render; deck.gl owns the canvas directly inside the Leaflet pane.
   return null;
 }
