@@ -393,6 +393,12 @@ export default function DeckOverlay({
     }
 
     deck.setProps({ layers: activeLayers });
+
+    // When the active layer set changes, any tooltip showing a now-removed
+    // datum becomes stale (cursor hasn't moved, so showTooltipForPick won't
+    // re-run). Hide it so it doesn't linger over a different overlay.
+    const tip = document.querySelector<HTMLDivElement>('[data-deck-tooltip="true"]');
+    if (tip) tip.style.display = "none";
   }, [layers, projects, entities, contracts]);
 
   // Nothing to render; deck.gl owns the canvas directly inside the Leaflet pane.
