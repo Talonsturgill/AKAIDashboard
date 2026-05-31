@@ -146,17 +146,6 @@ export default function DeckOverlay({
     }
 
     const mapContainer = map.getContainer();
-    const { width, height } = mapContainer.getBoundingClientRect();
-
-    const deck = new Deck({
-      canvas,
-      width,
-      height,
-      controller: false,
-      viewState: buildViewState(),
-      layers: [],
-    });
-    deckRef.current = deck;
 
     function syncViewport(): void {
       if (!deckRef.current) return;
@@ -169,11 +158,29 @@ export default function DeckOverlay({
       deckRef.current.setProps({ width: w, height: h });
     }
 
-    map.on("move", syncViewport);
-    map.on("zoom", syncViewport);
-    map.on("resize", resizeCanvas);
+    // Defer Deck init until Leaflet has positioned its internal panes.
+    // Without whenReady, map.getCenter() throws on _leaflet_pos before the
+    // map's first layout pass completes.
+    let cancelled = false;
+    map.whenReady(() => {
+      if (cancelled) return;
+      const { width, height } = mapContainer.getBoundingClientRect();
+      const deck = new Deck({
+        canvas,
+        width,
+        height,
+        controller: false,
+        viewState: buildViewState(),
+        layers: [],
+      });
+      deckRef.current = deck;
+      map.on("move", syncViewport);
+      map.on("zoom", syncViewport);
+      map.on("resize", resizeCanvas);
+    });
 
     return () => {
+      cancelled = true;
       map.off("move", syncViewport);
       map.off("zoom", syncViewport);
       map.off("resize", resizeCanvas);
