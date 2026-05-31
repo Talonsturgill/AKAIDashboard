@@ -6,6 +6,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Alaska.AI — a read-only "intelligence layer" dashboard for the Alaska AI ecosystem (entities, contracts, policy, infrastructure, content). Next.js 15 App Router + React 19 + Tailwind v4 + TypeScript (strict), reading from Supabase Postgres.
 
+## Why it exists
+
+Alaska is in the middle of an AI infrastructure buildout that almost nobody outside the state is tracking. Federal money is flowing in through BEAD broadband grants, NTIA Middle Mile awards, and DAF Enhanced Use Leases for AI data centers at JBER, Eielson, and Clear SFS. Alaska Native Corporations, telcos like GCI and Quintillion, the university system, state agencies, and tribal orgs are all making moves that compound on each other but live in fragmented sources — SAM.gov filings, Federal Register notices, state legislature bills, news articles, press releases. There is no single shared view of who is doing what.
+
+Alaska.AI is that shared view. It is built for the operators, policymakers, investors, journalists, and tribal leaders who need to see the whole board at once — not search ten sites every time they want to know who just won a contract or what bill is moving. It is read-only and public on purpose, so anyone can use it as a primary reference. The eight daily routines keep it current without human upkeep.
+
+Intended audiences (all four are first-class — design and copy serve every one):
+- Alaska policymakers and state agencies (DCCED, DOT&PF, legislature, governor's office).
+- Alaska Native Corporations, tribal organizations, and Alaska telcos / infrastructure operators.
+- Federal agencies (NTIA, DAF, DOD) and infrastructure investors evaluating the region.
+- Journalists, researchers, and the broader public tracking what's happening in Alaska tech.
+
+Implication for design choices: nothing should require a login, nothing should assume insider vocabulary, and every entity / contract / policy / project needs a source link so a reader of any background can verify it themselves.
+
 ## Commands
 
 ```bash

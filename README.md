@@ -4,6 +4,23 @@ The intelligence layer for AI in Alaska. A Palantir-esque dashboard tracking the
 entities, contracts, policy, infrastructure, and content that make up the
 Alaska AI ecosystem.
 
+## Why it exists
+
+Alaska is in the middle of an AI infrastructure buildout that almost nobody
+outside the state is tracking. Federal money is flowing in through BEAD
+broadband grants, NTIA Middle Mile awards, and DAF Enhanced Use Leases for AI
+data centers at JBER, Eielson, and Clear SFS. Alaska Native Corporations,
+telcos like GCI and Quintillion, the university system, state agencies, and
+tribal orgs are all making moves that compound on each other but live in
+fragmented sources — SAM.gov filings, Federal Register notices, state
+legislature bills, news articles, press releases. There is no single shared
+view of who is doing what.
+
+Alaska.AI is that shared view. It is built for the operators, policymakers,
+investors, journalists, and tribal leaders who need to see the whole board at
+once. It is read-only and public on purpose, so anyone can use it as a primary
+reference, and the eight daily routines keep it current without human upkeep.
+
 ## Architecture
 
 ```
