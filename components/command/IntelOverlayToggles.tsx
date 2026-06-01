@@ -25,7 +25,8 @@ const INTEL_LAYERS: {
   {
     key: "COLUMNS",
     label: "COLUMNS",
-    description: "Data center capacity as 3D extrusions. Height = MW.",
+    description:
+      "Planned data center compute. Each cylinder sits on a site, height grows with MW on a log scale, color matches build status.",
     color: "border-amber-500/60 text-amber-300",
     activeGlow:
       "border-amber-400 text-amber-200 [box-shadow:0_0_10px_hsl(38_92%_50%/0.5),inset_0_0_6px_hsl(38_92%_50%/0.1)]",

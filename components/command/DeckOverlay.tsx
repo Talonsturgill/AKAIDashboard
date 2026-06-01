@@ -110,18 +110,24 @@ type ColumnDatum = {
   capacityMetric: string | null;
 };
 
+// Column heights use log10 so a 3000 MW outlier doesn't visually crush the
+// 100 MW sites. log10(1+x) * scale puts every column in a readable band
+// (1 MW → ~9k, 100 MW → ~60k, 3000 MW → ~105k meters).
 function buildColumnData(projects: InfraProject[]): ColumnDatum[] {
   return projects
     .filter((p) => p.project_type === "data_center" && p.latitude && p.longitude)
-    .map((p) => ({
-      position: [p.longitude, p.latitude] as [number, number],
-      elevation: Math.max((p.capacity_value ?? 1) * 800, 5000),
-      color: statusColor(p.status),
-      name: p.name,
-      status: p.status,
-      capacityValue: p.capacity_value,
-      capacityMetric: p.capacity_metric,
-    }));
+    .map((p) => {
+      const mw = p.capacity_value ?? 1;
+      return {
+        position: [p.longitude, p.latitude] as [number, number],
+        elevation: Math.log10(mw + 1) * 30000,
+        color: statusColor(p.status),
+        name: p.name,
+        status: p.status,
+        capacityValue: p.capacity_value,
+        capacityMetric: p.capacity_metric,
+      };
+    });
 }
 
 type HeatPoint = { position: [number, number]; weight: number };
@@ -338,10 +344,17 @@ export default function DeckOverlay({
           getPosition: (d) => d.position,
           getElevation: (d) => d.elevation,
           getFillColor: (d) => d.color,
-          radius: 8000,
+          // 40 km base so the column reads as a volume at typical map zoom
+          // (the previous 8 km was sub-pixel at zoom 4 — the bug Talon flagged).
+          radius: 40000,
           extruded: true,
-          diskResolution: 6,
+          // Smooth circular extrusion instead of the previous 6-sided polygon.
+          diskResolution: 24,
           elevationScale: 1,
+          // Bright outline pops the cylinder off the basemap.
+          stroked: true,
+          getLineColor: [255, 255, 255, 220],
+          lineWidthMinPixels: 1,
           pickable: true,
         })
       );
