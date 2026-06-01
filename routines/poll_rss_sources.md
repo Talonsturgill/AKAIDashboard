@@ -86,11 +86,22 @@ PART 2 — SELF-VERIFICATION
 13. UPDATE routine_runs with verification metadata + per-source success map.
 
 ============================================================
-PART 3 — GIT CHANGELOG COMMIT
+PART 3 — GIT CHANGELOG PR + AUTO-MERGE
 ============================================================
 
 14. Write data-changelog/YYYY-MM-DD/poll_rss_sources.json. Include the
     per-source ingest count (e.g. { "anchorage-daily-news": 3, ... }).
-15. Commit/push: "data: poll_rss_sources daily run YYYY-MM-DD".
-16. Exit.
+
+15. Push via GitHub MCP to branch
+      data/YYYY-MM-DD/poll-rss-sources
+    Commit: "data: poll_rss_sources daily run YYYY-MM-DD".
+
+16. Open a PR into main with the verification checklist + per-source ingest
+    counts in the body.
+
+17. If verification passed: squash-merge and delete branch.
+    If failed: label 'needs-review', request review from Talonsturgill,
+    leave open.
+
+18. Exit.
 ```

@@ -106,16 +106,27 @@ PART 2 — SELF-VERIFICATION
     findings in metadata.
 
 ============================================================
-PART 3 — GIT CHANGELOG COMMIT
+PART 3 — GIT CHANGELOG PR + AUTO-MERGE
 ============================================================
 
-12. Write data-changelog/YYYY-MM-DD/poll_sam_gov_contracts.json per the
-    schema in data-changelog/README.md. Include both new contracts AND new
-    entities you created.
+12. Build the JSON manifest at
+    data-changelog/YYYY-MM-DD/poll_sam_gov_contracts.json
+    per the schema in data-changelog/README.md. Include both new contracts
+    AND new entities you created.
 
-13. Commit/push via GitHub MCP to Talonsturgill/AKAIDashboard main with
-    message: "data: poll_sam_gov_contracts daily run YYYY-MM-DD".
+13. Via GitHub MCP, push the file to a new branch in
+    Talonsturgill/AKAIDashboard:
+      branch: data/YYYY-MM-DD/poll-sam-gov-contracts
+      commit: data: poll_sam_gov_contracts daily run YYYY-MM-DD
     No AI attribution.
 
-14. Exit.
+14. Open a PR from that branch into main:
+      title: data: poll_sam_gov_contracts daily run YYYY-MM-DD
+      body: summary + Part 2 verification checklist.
+
+15. If verification passed: squash-merge the PR, delete the branch.
+    If failed: label 'needs-review', request review from Talonsturgill,
+    leave open.
+
+16. Exit.
 ```

@@ -88,14 +88,23 @@ person is expected to investigate.
 
 ## Commit convention
 
-Commit messages use the form:
+Routines do NOT push directly to main. Each run:
 
-```
-data: <routine_name> daily run YYYY-MM-DD
-```
+1. Writes its manifest to this directory on a NEW branch
+   `data/YYYY-MM-DD/<routine-slug>`.
+2. Opens a pull request into main with title
+   `data: <routine_name> daily run YYYY-MM-DD` and the verification
+   checklist in the PR body.
+3. If verification passed → squash-merges the PR and deletes the branch
+   (so main history reads like a direct commit, but the merge preserves
+   the report).
+4. If verification failed → leaves the PR open, applies the
+   `needs-review` label, requests review from `Talonsturgill`.
 
-Examples:
-- `data: poll_sam_gov_contracts daily run 2026-05-31`
-- `data: weekly_adversarial_sweep run 2026-06-01`
+The `weekly_adversarial_sweep` PR is NEVER auto-merged regardless of
+findings — it always sits open under the `weekly-sweep` label until a
+human reviews and merges it by hand.
 
 No author attribution beyond the GitHub account the routine pushes from.
+Commit messages and PR bodies must NOT contain "Generated with Claude",
+"Co-Authored-By: Claude", or any similar AI marker.

@@ -84,11 +84,21 @@ PART 2 — SELF-VERIFICATION
 7. UPDATE routine_runs with verification metadata.
 
 ============================================================
-PART 3 — GIT CHANGELOG COMMIT
+PART 3 — GIT CHANGELOG PR + AUTO-MERGE
 ============================================================
 
 8. Write data-changelog/YYYY-MM-DD/refresh_dashboard_metrics.json.
    Include the diff vs yesterday for platform_stats counts.
-9. Commit/push: "data: refresh_dashboard_metrics daily run YYYY-MM-DD".
-10. Exit.
+
+9. Push via GitHub MCP to branch
+     data/YYYY-MM-DD/refresh-dashboard-metrics
+   Commit: "data: refresh_dashboard_metrics daily run YYYY-MM-DD".
+
+10. Open a PR into main with the day-over-day count deltas in the body.
+
+11. If verification passed: squash-merge and delete branch.
+    If failed: label 'needs-review', request review from Talonsturgill,
+    leave open.
+
+12. Exit.
 ```

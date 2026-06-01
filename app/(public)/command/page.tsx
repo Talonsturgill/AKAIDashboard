@@ -1,6 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import CommandCenter from "@/components/command/CommandCenter";
-import type { InfraProject, EntityRow, ContractRow, ArchiveRow } from "@/components/command/DetailPanel";
+import type {
+  InfraProject,
+  EntityRow,
+  ContractRow,
+  ArchiveRow,
+  FiberRoute,
+} from "@/lib/command/types";
 
 export const revalidate = 300;
 
@@ -17,26 +23,48 @@ type RawInfraRow = Omit<InfraProject, "latitude" | "longitude" | "metadata"> & {
   metadata: Record<string, unknown> | null;
 };
 
+// fiber_routes.waypoints is JSONB — parse defensively into the typed shape.
+type RawFiberRouteRow = Omit<FiberRoute, "waypoints"> & {
+  waypoints: unknown;
+};
+
+function parseWaypoints(raw: unknown): [number, number][] {
+  if (!Array.isArray(raw)) return [];
+  const out: [number, number][] = [];
+  for (const pair of raw) {
+    if (
+      Array.isArray(pair) &&
+      pair.length === 2 &&
+      typeof pair[0] === "number" &&
+      typeof pair[1] === "number"
+    ) {
+      out.push([pair[0], pair[1]]);
+    }
+  }
+  return out;
+}
+
 export default async function CommandPage() {
   const supabase = await createClient();
 
-  // All four fetches are independent — run in parallel
+  // All five fetches are independent — run in parallel
   const [
     { data: rawProjectsData },
     { data: rawEntities },
     { data: rawContracts },
     { data: rawArticles },
+    { data: rawFiberRoutes },
   ] = await Promise.all([
     supabase
       .from("infrastructure_projects")
       .select(
-        "id,name,project_type,operator_entity_id,latitude,longitude,location_name,capacity_metric,capacity_value,status,announced_date,operational_date,estimated_cost,source_urls,metadata",
+        "id,name,project_type,operator_entity_id,latitude,longitude,location_name,capacity_metric,capacity_value,status,announced_date,operational_date,estimated_cost,source_urls,display_radius_km,metadata",
       )
       .not("latitude", "is", null)
       .not("longitude", "is", null),
     supabase
       .from("entities")
-      .select("id,name,slug,type")
+      .select("id,name,slug,type,headquarters_latitude,headquarters_longitude")
       .returns<EntityRow[]>(),
     supabase
       .from("contracts")
@@ -46,6 +74,10 @@ export default async function CommandPage() {
       .from("archive_content")
       .select("id,title,source_url")
       .returns<ArchiveRow[]>(),
+    supabase
+      .from("fiber_routes")
+      .select("id,slug,name,operator_entity_id,waypoints,color,weight,status")
+      .neq("status", "decommissioned"),
   ]);
 
   const rawProjects = (rawProjectsData ?? []) as RawInfraRow[];
@@ -71,12 +103,26 @@ export default async function CommandPage() {
       operational_date: p.operational_date,
       estimated_cost: p.estimated_cost,
       source_urls: p.source_urls,
+      display_radius_km: p.display_radius_km,
       metadata: p.metadata,
     }));
 
   const entities: EntityRow[] = rawEntities ?? [];
   const contracts: ContractRow[] = rawContracts ?? [];
   const articles: ArchiveRow[] = rawArticles ?? [];
+
+  const fiberRoutes: FiberRoute[] = ((rawFiberRoutes ?? []) as RawFiberRouteRow[])
+    .map((r) => ({
+      id: r.id,
+      slug: r.slug,
+      name: r.name,
+      operator_entity_id: r.operator_entity_id,
+      waypoints: parseWaypoints(r.waypoints),
+      color: r.color,
+      weight: r.weight,
+      status: r.status,
+    }))
+    .filter((r) => r.waypoints.length >= 2);
 
   // ── KPI aggregates ───────────────────────────────────────────────────────────
   const totalComputeMw = projects
@@ -101,6 +147,7 @@ export default async function CommandPage() {
         entities={entities}
         contracts={contracts}
         articles={articles}
+        fiberRoutes={fiberRoutes}
         totalComputeMw={totalComputeMw}
         totalFiberTbps={totalFiberTbps}
         totalCapex={totalCapex}

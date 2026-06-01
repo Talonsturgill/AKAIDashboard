@@ -3,14 +3,9 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import type { InfraProject } from "@/lib/command/types";
+import type { InfraProject, FiberRoute } from "@/lib/command/types";
 import type { LayerKey } from "./LayerToggles";
-import {
-  STATUS_COLORS,
-  MILITARY_KEYWORDS,
-  FIBER_ROUTES,
-  MILITARY_RINGS,
-} from "@/lib/command/constants";
+import { STATUS_COLORS, MILITARY_KEYWORDS } from "@/lib/command/constants";
 
 function markerColor(status: string | null): string {
   return STATUS_COLORS[status ?? ""] ?? "#94a3b8";
@@ -78,6 +73,7 @@ function isVisible(p: InfraProject, activeLayers: Set<LayerKey>): boolean {
 
 type LeafletMapProps = {
   projects: InfraProject[];
+  fiberRoutes: FiberRoute[];
   activeLayers: Set<LayerKey>;
   selectedProjectId: string | null;
   onMarkerClick: (project: InfraProject) => void;
@@ -87,6 +83,7 @@ type LeafletMapProps = {
 
 export default function LeafletMap({
   projects,
+  fiberRoutes,
   activeLayers,
   selectedProjectId,
   onMarkerClick,
@@ -154,21 +151,29 @@ export default function LeafletMap({
     const fiberActive = activeLayers.has("fiber");
     const militaryActive = activeLayers.has("military");
 
+    // Fiber polylines sourced from the fiber_routes table (was FIBER_ROUTES const).
+    // Any new row written to the table by a routine appears here on next render.
     if (fiberActive) {
-      for (const route of FIBER_ROUTES) {
-        const line = L.polyline(route.positions, {
-          color: "#22d3ee",
-          weight: route.weight,
+      for (const route of fiberRoutes) {
+        const line = L.polyline(route.waypoints, {
+          color: route.color ?? "#22d3ee",
+          weight: route.weight ?? 2,
           opacity: 0.7,
         }).addTo(map);
         overlaysRef.current.push(line);
       }
     }
 
+    // Territory rings sourced from infrastructure_projects.display_radius_km
+    // (was the MILITARY_RINGS const lookup). Any project with the column set
+    // gets a ring, regardless of military classification — so future
+    // restricted-territory or sensitivity-zone use cases are already wired.
     if (militaryActive) {
-      for (const ring of MILITARY_RINGS) {
-        const circle = L.circle(ring.center, {
-          radius: ring.radius,
+      for (const p of projects) {
+        if (p.display_radius_km === null || p.display_radius_km <= 0) continue;
+        if (!isMilitary(p.name)) continue; // current toggle scoping
+        const circle = L.circle([p.latitude, p.longitude], {
+          radius: p.display_radius_km * 1000, // km → meters
           color: "#a78bfa",
           weight: 1.5,
           opacity: 0.55,
@@ -194,7 +199,7 @@ export default function LeafletMap({
       );
       overlaysRef.current.push(marker);
     }
-  }, [projects, activeLayers, selectedProjectId]);
+  }, [projects, fiberRoutes, activeLayers, selectedProjectId]);
 
   return (
     <div

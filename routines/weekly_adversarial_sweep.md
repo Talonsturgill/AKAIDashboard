@@ -80,7 +80,7 @@ PART 2 — REPORT
 7. UPDATE routine_runs with the full report in metadata.
 
 ============================================================
-PART 3 — GIT CHANGELOG COMMIT + SUBSTACK DRAFT
+PART 3 — WEEKLY REPORT PR (NEVER AUTO-MERGE)
 ============================================================
 
 8. Write data-changelog/YYYY-MM-DD/weekly_adversarial_sweep.json with the
@@ -90,7 +90,18 @@ PART 3 — GIT CHANGELOG COMMIT + SUBSTACK DRAFT
    data-changelog/YYYY-MM-DD/weekly_sweep_report.md formatted for human
    reading. This is the artifact Talon scans Sunday night.
 
-10. Commit/push: "data: weekly_adversarial_sweep run YYYY-MM-DD".
+10. Push via GitHub MCP both files to branch
+      data/YYYY-MM-DD/weekly-adversarial-sweep
+    Commit: "data: weekly_adversarial_sweep run YYYY-MM-DD".
 
-11. Exit.
+11. Open a PR into main with the full Markdown report as the PR body
+    (not just attached) so it appears inline on GitHub.
+    title: "weekly sweep: YYYY-MM-DD findings"
+
+12. ALWAYS leave this PR open for human review, regardless of whether the
+    sweep found issues. The weekly review is a manual checkpoint. Add the
+    label 'weekly-sweep' and request review from Talonsturgill. The PR is
+    merged by hand once Talon has acknowledged the findings.
+
+13. Exit.
 ```

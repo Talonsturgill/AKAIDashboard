@@ -119,11 +119,21 @@ PART 2 — SELF-VERIFICATION
 12. UPDATE routine_runs with verification metadata.
 
 ============================================================
-PART 3 — GIT CHANGELOG COMMIT
+PART 3 — GIT CHANGELOG PR + AUTO-MERGE
 ============================================================
 
 13. Write data-changelog/YYYY-MM-DD/extract_entities.json. Include new
     entities and total mention-count updates per existing entity.
-14. Commit/push: "data: extract_entities daily run YYYY-MM-DD".
-15. Exit.
+
+14. Push via GitHub MCP to branch
+      data/YYYY-MM-DD/extract-entities
+    Commit: "data: extract_entities daily run YYYY-MM-DD".
+
+15. Open a PR into main with the verification checklist in the body.
+
+16. If verification passed: squash-merge and delete branch.
+    If failed: label 'needs-review', request review from Talonsturgill,
+    leave open.
+
+17. Exit.
 ```

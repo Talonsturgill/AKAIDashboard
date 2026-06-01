@@ -81,10 +81,21 @@ PART 2 — SELF-VERIFICATION
 11. UPDATE routine_runs with verification metadata.
 
 ============================================================
-PART 3 — GIT CHANGELOG COMMIT
+PART 3 — GIT CHANGELOG PR + AUTO-MERGE
 ============================================================
 
 12. Write data-changelog/YYYY-MM-DD/poll_federal_register.json.
-13. Commit/push to main: "data: poll_federal_register daily run YYYY-MM-DD".
-14. Exit.
+
+13. Push via GitHub MCP to branch
+      data/YYYY-MM-DD/poll-federal-register
+    Commit message: "data: poll_federal_register daily run YYYY-MM-DD".
+
+14. Open a PR from that branch into main with the verification checklist
+    in the body.
+
+15. If verification passed: squash-merge and delete branch.
+    If failed: label 'needs-review', request review from Talonsturgill,
+    leave open.
+
+16. Exit.
 ```

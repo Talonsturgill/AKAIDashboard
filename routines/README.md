@@ -54,13 +54,26 @@ duplicates, constraint validity, writing-style compliance, and re-verifies a
 random sample against the source URL. Findings are written into
 `routine_runs.metadata.verification`.
 
-### Layer 2 — Git changelog commit (in every prompt)
+### Layer 2 — Git changelog PR with auto-merge on success
 Every routine, after verifying, writes a JSON manifest of its run to
-`data-changelog/YYYY-MM-DD/<routine_name>.json` and commits it to the
-repo's main branch. This produces a permanent, browseable, diff-able audit
-trail of every dataset change. A run that never happens leaves a visible
-gap on the commit calendar. See [`data-changelog/README.md`](../data-changelog/README.md)
-for the manifest schema.
+`data-changelog/YYYY-MM-DD/<routine_name>.json`, pushes the file to a
+short-lived branch `data/YYYY-MM-DD/<routine-slug>`, opens a pull request
+into main with the verification checklist in the body, and then:
+
+- If verification passed: **squash-merges the PR and deletes the branch**.
+  Net effect is identical to a direct commit, but the merge commit
+  preserves the verification report.
+- If verification failed: **leaves the PR open**, applies the
+  `needs-review` label, and requests review from `Talonsturgill`. The PR
+  shows up in the GitHub Pull Requests tab as a visible alert.
+
+This gives a permanent, browseable, diff-able audit trail and surfaces
+failures without needing a separate alerting channel. A run that never
+happens leaves a visible gap on the commit calendar. The weekly
+adversarial sweep is the one exception: its PR is NEVER auto-merged so
+Talon can review findings each Sunday before they land in main. See
+[`data-changelog/README.md`](../data-changelog/README.md) for the
+manifest schema.
 
 ### Layer 3 — Database-level guards (in `supabase/migrations/0013_data_integrity_guards.sql`)
 - `audit_log` table records every INSERT/UPDATE/DELETE on the core tables via

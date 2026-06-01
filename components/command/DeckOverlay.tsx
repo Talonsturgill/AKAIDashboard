@@ -12,45 +12,12 @@ import { STATUS_COLORS_RGBA } from "@/lib/command/constants";
 
 const FEDERAL_SOURCE: [number, number] = [-149.9, 61.2]; // Anchorage, as federal origin
 
-// HQ coords for entities that win contracts but have no infrastructure_projects
-// row pointing to them. Without these, most ARC entries would be dropped because
-// the target endpoint could not be resolved.
-const ENTITY_HQ_FALLBACK: Record<string, [number, number]> = {
-  "nana-regional-corporation": [-149.9, 61.2],
-  "doyon-limited": [-147.72, 64.84],
-  "sealaska-corporation": [-134.42, 58.3],
-  "chugach-alaska-corporation": [-149.9, 61.2],
-  "calista-corporation": [-149.9, 61.2],
-  "cook-inlet-region-inc": [-149.9, 61.2],
-  "bering-straits-native-corporation": [-165.41, 64.5],
-  "bristol-bay-native-corporation": [-149.9, 61.2],
-  "the-aleut-corporation": [-149.9, 61.2],
-  "koniag-inc": [-152.4, 57.79],
-  "gci-communication-corp": [-149.9, 61.2],
-  "alaska-communications-systems": [-149.9, 61.2],
-  "matanuska-telecom-association": [-149.1, 61.6],
-  "university-of-alaska-anchorage": [-149.83, 61.19],
-  "university-of-alaska-fairbanks": [-147.85, 64.86],
-  "university-of-alaska-southeast": [-134.42, 58.3],
-  "alaska-pacific-university": [-149.81, 61.19],
-  "alaska-industrial-development-and-export-authority": [-149.9, 61.2],
-  "alaska-energy-authority": [-149.9, 61.2],
-  "alaska-dcced": [-134.42, 58.3],
-  "alaska-dot-pf": [-134.42, 58.3],
-  "joint-base-elmendorf-richardson": [-149.71, 61.3],
-  "eielson-air-force-base": [-147.05, 64.66],
-  "noaa-alaska-regional-office": [-134.42, 58.3],
-  "usgs-alaska-science-center": [-149.9, 61.2],
-  "quintillion": [-149.9, 61.2],
-  "alcan-one": [-147.35, 64.75],
-  "alaska-federation-of-natives": [-149.9, 61.2],
-  "cook-inlet-tribal-council": [-149.9, 61.2],
-  "tanana-chiefs-conference": [-147.72, 64.84],
-  "association-of-village-council-presidents": [-161.76, 60.79],
-  "bristol-bay-native-association": [-158.46, 59.04],
-  "alaska-bead-program": [-149.9, 61.2],
-};
-
+// Resolve an entity to a [longitude, latitude] pair for arc endpoints:
+//   1. If the entity operates an infrastructure project, use the project's coords
+//   2. Else if the entity row carries headquarters_latitude/longitude, use those
+//   3. Else return null and the arc is dropped
+// HQ coords live in the entities table (migration 0014) so routines can grow
+// the resolvable set by writing rows, without code changes.
 function entityLocation(
   entityId: string | null,
   entityMap: Map<string, EntityRow>,
@@ -61,8 +28,13 @@ function entityLocation(
   if (!entity) return null;
   const project = projectsByEntity.get(entityId);
   if (project) return [project.longitude, project.latitude];
-  const slug = entity.slug ?? "";
-  return ENTITY_HQ_FALLBACK[slug] ?? null;
+  if (
+    entity.headquarters_latitude !== null &&
+    entity.headquarters_longitude !== null
+  ) {
+    return [entity.headquarters_longitude, entity.headquarters_latitude];
+  }
+  return null;
 }
 
 function logScale(value: number, min = 2, max = 16): number {

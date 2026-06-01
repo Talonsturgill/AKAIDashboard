@@ -8,7 +8,7 @@ import LayerToggles, { type LayerKey } from "./LayerToggles";
 import IntelOverlayToggles, { type IntelKey } from "./IntelOverlayToggles";
 import CoordinateHud from "./CoordinateHud";
 import KpiBar from "./KpiBar";
-import type { InfraProject, EntityRow, ContractRow, ArchiveRow } from "@/lib/command/types";
+import type { InfraProject, EntityRow, ContractRow, ArchiveRow, FiberRoute } from "@/lib/command/types";
 import { STATUS_LEGEND } from "@/lib/command/constants";
 
 const LeafletMap = dynamic(() => import("./LeafletMap"), {
@@ -28,6 +28,7 @@ type CommandCenterProps = {
   entities: EntityRow[];
   contracts: ContractRow[];
   articles: ArchiveRow[];
+  fiberRoutes: FiberRoute[];
   totalComputeMw: number;
   totalFiberTbps: number;
   totalCapex: number;
@@ -40,6 +41,7 @@ export default function CommandCenter({
   entities,
   contracts,
   articles,
+  fiberRoutes,
   totalComputeMw,
   totalFiberTbps,
   totalCapex,
@@ -116,6 +118,7 @@ export default function CommandCenter({
         <div className="absolute inset-0">
           <LeafletMap
             projects={projects}
+            fiberRoutes={fiberRoutes}
             activeLayers={activeLayers}
             onMarkerClick={handleMarkerClick}
             onCoordsChange={handleCoordsChange}

@@ -90,10 +90,20 @@ PART 2 — SELF-VERIFICATION
 10. UPDATE routine_runs with verification metadata.
 
 ============================================================
-PART 3 — GIT CHANGELOG COMMIT
+PART 3 — GIT CHANGELOG PR + AUTO-MERGE
 ============================================================
 
 11. Write data-changelog/YYYY-MM-DD/infer_relationships.json.
-12. Commit/push: "data: infer_relationships daily run YYYY-MM-DD".
-13. Exit.
+
+12. Push via GitHub MCP to branch
+      data/YYYY-MM-DD/infer-relationships
+    Commit: "data: infer_relationships daily run YYYY-MM-DD".
+
+13. Open a PR into main with the verification checklist in the body.
+
+14. If verification passed: squash-merge and delete branch.
+    If failed: label 'needs-review', request review from Talonsturgill,
+    leave open.
+
+15. Exit.
 ```

@@ -104,17 +104,29 @@ PART 2 — SELF-VERIFICATION (mandatory before exit)
       WHERE id = <run_id>;
 
 ============================================================
-PART 3 — GIT CHANGELOG COMMIT
+PART 3 — GIT CHANGELOG PR + AUTO-MERGE
 ============================================================
 
-12. Build a JSON file at path
+12. Build the JSON manifest at path
     data-changelog/YYYY-MM-DD/sync_substack_archive.json
     following the schema in data-changelog/README.md.
 
-13. Commit and push via the GitHub MCP to the Talonsturgill/AKAIDashboard
-    repo, branch main, with commit message:
-      data: sync_substack_archive daily run YYYY-MM-DD
+13. Via the GitHub MCP, push the file to a NEW branch in
+    Talonsturgill/AKAIDashboard:
+      branch name: data/YYYY-MM-DD/sync-substack-archive
+      commit message: data: sync_substack_archive daily run YYYY-MM-DD
     Do NOT add any AI attribution or Co-Authored-By trailers.
 
-14. Exit. Done.
+14. Open a pull request from that branch into main:
+      title: data: sync_substack_archive daily run YYYY-MM-DD
+      body: a short summary (created N, updated N) followed by the
+            verification block from Part 2 rendered as a checklist.
+
+15. If verification passed (no blocking issues in metadata.verification.issues):
+      Auto-merge the PR (squash merge) and delete the source branch.
+    Otherwise:
+      Add the label 'needs-review' and request review from Talonsturgill.
+      Leave the PR open. Do NOT merge.
+
+16. Exit. Done.
 ```
