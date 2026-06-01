@@ -132,13 +132,47 @@ function buildColumnData(projects: InfraProject[]): ColumnDatum[] {
 
 type HeatPoint = { position: [number, number]; weight: number };
 
-function buildHeatData(projects: InfraProject[]): HeatPoint[] {
-  return projects
-    .filter((p) => p.latitude && p.longitude)
-    .map((p) => ({
-      position: [p.longitude, p.latitude] as [number, number],
-      weight: 1,
-    }));
+// HEAT now visualizes dollar concentration rather than uniform-density:
+//   * each infrastructure project contributes its estimated_cost
+//   * each federal contract contributes its value at the WINNING entity's
+//     location (project coords if the entity operates a project, else HQ
+//     coords from migration 0014)
+// sqrt compresses the largest values so a single billion-dollar award
+// doesn't wash out the smaller hotspots.
+function buildHeatData(
+  projects: InfraProject[],
+  contracts: ContractRow[],
+  entities: EntityRow[],
+): HeatPoint[] {
+  const entityMap = new Map(entities.map((e) => [e.id, e]));
+  const projectsByEntity = new Map<string, InfraProject>();
+  for (const p of projects) {
+    if (p.operator_entity_id) projectsByEntity.set(p.operator_entity_id, p);
+  }
+
+  const points: HeatPoint[] = [];
+
+  for (const p of projects) {
+    const dollars = p.estimated_cost ?? 0;
+    if (!p.latitude || !p.longitude || dollars <= 0) continue;
+    points.push({
+      position: [p.longitude, p.latitude],
+      weight: Math.sqrt(dollars),
+    });
+  }
+
+  for (const c of contracts) {
+    if (!c.contract_value || c.contract_value <= 0) continue;
+    if (!c.winning_entity_id) continue;
+    const loc = entityLocation(c.winning_entity_id, entityMap, projectsByEntity);
+    if (!loc) continue;
+    points.push({
+      position: loc,
+      weight: Math.sqrt(c.contract_value),
+    });
+  }
+
+  return points;
 }
 
 type DeckOverlayProps = {
@@ -311,7 +345,7 @@ export default function DeckOverlay({
 
     const arcData = buildArcData(contracts, entities, projects);
     const columnData = buildColumnData(projects);
-    const heatData = buildHeatData(projects);
+    const heatData = buildHeatData(projects, contracts, entities);
 
     const activeLayers: Layer[] = [];
 
@@ -366,10 +400,10 @@ export default function DeckOverlay({
           id: "intel-heat",
           data: heatData,
           getPosition: (d) => d.position,
-          getWeight: () => 1,
+          getWeight: (d) => d.weight,
           radiusPixels: 60,
-          intensity: 1,
-          threshold: 0.05,
+          intensity: 1.2,
+          threshold: 0.03,
           colorRange: [
             [0, 0, 255, 0],
             [0, 128, 255, 80],

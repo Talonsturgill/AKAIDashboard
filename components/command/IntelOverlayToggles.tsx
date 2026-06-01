@@ -32,8 +32,8 @@ const INTEL_LAYERS: {
   },
   {
     key: "HEAT",
-    label: "HEAT",
-    description: "Asset density. Hot = clustered.",
+    label: "CAPITAL",
+    description: "Federal $ landing here. Brighter = more.",
     color: "border-rose-500/60 text-rose-300",
     activeGlow:
       "border-rose-400 text-rose-200 [box-shadow:0_0_10px_hsl(351_83%_53%/0.5),inset_0_0_6px_hsl(351_83%_53%/0.1)]",
