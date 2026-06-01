@@ -136,7 +136,7 @@ export default function CommandCenter({
           )}
         </div>
 
-        <div className="absolute right-4 top-4 z-[1100] flex max-h-[calc(100vh-7rem)] flex-col gap-3 overflow-y-auto rounded border border-[var(--color-border-soft)] bg-[var(--color-background)]/85 p-3 backdrop-blur-sm">
+        <div className="absolute right-4 top-4 z-[1100] flex w-[200px] max-h-[calc(100vh-7rem)] flex-col gap-3 overflow-y-auto rounded border border-[var(--color-border-soft)] bg-[var(--color-background)]/85 p-3 backdrop-blur-sm">
           <div className="flex flex-col gap-1.5">
             <span className="label-eyebrow mb-1 text-[9px] tracking-[0.16em]">STATUS</span>
             {STATUS_LEGEND.map(({ status, label, color }) => (

@@ -17,7 +17,7 @@ const INTEL_LAYERS: {
   {
     key: "ARCS",
     label: "ARCS",
-    description: "Federal contract money flows. Hover an arc for details.",
+    description: "Contract money flows. Hover for detail.",
     color: "border-cyan-500/60 text-cyan-300",
     activeGlow:
       "border-cyan-400 text-cyan-200 [box-shadow:0_0_10px_hsl(189_94%_43%/0.5),inset_0_0_6px_hsl(189_94%_43%/0.1)]",
@@ -25,8 +25,7 @@ const INTEL_LAYERS: {
   {
     key: "COLUMNS",
     label: "COLUMNS",
-    description:
-      "Planned data center compute. Each cylinder sits on a site, height grows with MW on a log scale, color matches build status.",
+    description: "Data center MW. Taller = bigger.",
     color: "border-amber-500/60 text-amber-300",
     activeGlow:
       "border-amber-400 text-amber-200 [box-shadow:0_0_10px_hsl(38_92%_50%/0.5),inset_0_0_6px_hsl(38_92%_50%/0.1)]",
@@ -34,7 +33,7 @@ const INTEL_LAYERS: {
   {
     key: "HEAT",
     label: "HEAT",
-    description: "Infrastructure density. Hot zones = clustered assets.",
+    description: "Asset density. Hot = clustered.",
     color: "border-rose-500/60 text-rose-300",
     activeGlow:
       "border-rose-400 text-rose-200 [box-shadow:0_0_10px_hsl(351_83%_53%/0.5),inset_0_0_6px_hsl(351_83%_53%/0.1)]",
